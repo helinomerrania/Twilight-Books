@@ -132,7 +132,10 @@ tbody tr:hover td{background:var(--sunk)}
   border:1px solid var(--edge);background:var(--raised);color:var(--muted)}
 .mini:hover{color:var(--ink);border-color:var(--ink)}
 .quick{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
-.quick .mini{border-radius:999px;padding:6px 13px;font-size:12.5px;color:var(--ink)}
+.quick button{font:inherit;font-size:12.5px;font-weight:500;padding:6px 13px;
+  border-radius:999px;cursor:pointer;border:1px solid var(--edge);
+  background:var(--raised);color:var(--ink);transition:border-color .12s}
+.quick button:hover{border-color:var(--ink)}
 .quick button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);
   color:var(--on-accent);font-weight:600}
 
@@ -356,7 +359,7 @@ const NIGHT_NOTE={
 
 const LS='twilight-books-v1';
 
-const APP_VERSION='2026.11.15';
+const APP_VERSION='2026.11.16';
 
 /* ======== src/util/money.js */
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
