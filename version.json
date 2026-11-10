@@ -1,6 +1,6 @@
 {
-  "version": "2026.11.11",
-  "notes": "Your books are copied aside before an update is applied, so it can always be undone.",
+  "version": "2026.11.12",
+  "notes": "Paying from Settle up now clears the month you are settling, dated the day the money actually leaves.",
   "files": [
     "TwilightBooks.html",
     "TwilightHelper.ps1",

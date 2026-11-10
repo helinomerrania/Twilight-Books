@@ -316,7 +316,7 @@ function inHands(upto){return floatPots().reduce((a,p)=>a+potBalance(p.name,upto
    written there, so a synced folder (OneDrive, Google Drive) carries it off the
    machine without anyone remembering to do it. */
 const LS='twilight-books-v1';
-const APP_VERSION='2026.11.11';
+const APP_VERSION='2026.11.12';
 let storeOK=true;
 function readLocal(){try{const r=localStorage.getItem(LS);return r?JSON.parse(r):null;}catch(e){storeOK=false;return null;}}
 function snapshotAll(){return {v:1,savedAt:new Date().toISOString(),
@@ -861,7 +861,7 @@ function live(){
 function livePayroll(){return (S.setup.staff||[]).map(s=>{
   /* an advance handed back is recorded on the cash-in side, so it nets off */
   const adv=sumCB('Staff Advance','out',s.name)-sumCB('Staff Advance','in',s.name),
-        paid=sumCB('Salary Payment','out',s.name);
+        paid=paidForMonth('Salary Payment',s.name);
   const netPay=num(s.salary)-adv,still=netPay-paid,carryIn=num(s.carryIn);
   return {name:s.name,gross:num(s.salary),adv,netPay,paid,still,carryIn,
           payNow:Math.max(0,still-carryIn),carry:Math.max(0,carryIn-still)};});}
@@ -873,8 +873,10 @@ function liveSuppliers(){const asAt=S.debt.asAt||'';const cd=countForPeriod();
        show up in this month's debt and in the figure the settle-up offers to pay */
     let credit=0;for(const p of S.pu)
       if(p.s===name&&p.terms!=='Cash'&&ymd(p.d)>asAt&&ymd(p.d)<=S.ui.end)credit+=num(p.amt);
-    let paid=0;for(const e of S.cb)
-      if(e.t==='Supplier Payment'&&e.x===name&&ymd(e.d)>asAt&&ymd(e.d)<=S.ui.end)paid+=num(e.out);
+    let paid=0;for(const e of S.cb){
+      if(e.t!=='Supplier Payment'||e.x!==name)continue;
+      const on=settlesOn(e);
+      if(on>asAt&&on<=S.ui.end)paid+=num(e.out);}
     let stock=0;for(const it of S.setup.stockItems||[])if(it.supplier===name)stock+=itemValue(it,counts,cd);
     return {name,owedBefore:bf+credit,paid,still:bf+credit-paid,stock};});}
 function livePartners(){const net=live().net,list=S.setup.partners||[];let given=0;
@@ -890,7 +892,7 @@ function livePartners(){const net=live().net,list=S.setup.partners||[];let given
     const share=(whole&&i===list.length-1)?(net-given):mround(net*num(p.share));
     given+=share;
     const wd=sumCB('Owner Advance','out',p.name)-sumCB('Owner Repayment','in',p.name)-sumCB('Owner Capital In','in',p.name);
-    const bal=bf+share-wd,paid=sumCB('Partner Settlement','out',p.name);
+    const bal=bf+share-wd,paid=paidForMonth('Partner Settlement',p.name);
     return {name:p.name,share:num(p.share),bf,profit:share,wd,bal,paid,cf:bal-paid};});}
 function liveExpenses(){const m={};
   for(const e of S.cb){if((e.t!=='Daily Expense'&&e.t!=='Monthly Bill')||!inPer(e.d))continue;
@@ -1004,6 +1006,24 @@ function elecPaidFor(m){const el=elecDetails();let t=0;
   return t;}
 function elecOwedFor(m){return elecCharged(m)-elecPaidFor(m);}
 
+/* ---- which month a payment answers for
+   A payment made on the Settle up page carries the month it settles. Paying
+   October's rent in November then clears October, while the cash still leaves
+   on the day it actually left - so the cash counts keep tying. A row with no
+   month on it (typed in by hand, or written before this existed) counts by its
+   date exactly as it always did. */
+function paidForMonth(type,detail){
+  const m=monthOf(S.ui.start);let t=0;
+  for(const e of S.cb){
+    if(e.t!==type)continue;
+    if(detail!=null&&e.x!==detail)continue;
+    if(e.m?e.m!==m:!inPer(e.d))continue;
+    t+=num(e.out);}
+  return t;}
+/* What a supplier is owed is a running total, so a payment that answers for an
+   earlier month must still count in every month after it, not only in its own. */
+function settlesOn(e){return e.m?endOfMonth(e.m):ymd(e.d);}
+
 function dueSalaries(){return payroll().map(p=>{
   const note=money(p.gross)+' salary'
     +(p.adv?' \u2212 '+money(p.adv)+' advances':'')
@@ -1024,7 +1044,7 @@ function dueSuppliers(){const ns=noteSize();
     return {x:x.name,amt:0,note,done:x.paid>0?'paid':'nothing consumed to pay'};});}
 
 function dueFixed(){return (S.setup.fixedExpenses||[]).map(f=>{
-    const paid=sumCB('Fixed Expense Payment','out',f.name),due=num(f.amount)-paid;
+    const paid=paidForMonth('Fixed Expense Payment',f.name),due=num(f.amount)-paid;
     const note=money(f.amount)+' charged to the month'+(paid?' \u2212 '+money(paid)+' paid':'');
     if(due>0)return {x:f.name,amt:mround(due),t:'Fixed Expense Payment',note};
     return {x:f.name,amt:0,note,done:'paid'};});}
@@ -1041,7 +1061,7 @@ function dueElec(){const out=[];
 function dueBills(){
   const el=elecDetails(),mb=(S.setup.types||[]).find(t=>t.name==='Monthly Bill');
   return ((mb&&mb.details)||[]).filter(d=>!el.includes(d)).map(d=>{
-    const paidNow=sumCB('Monthly Bill','out',d);
+    const paidNow=paidForMonth('Monthly Bill',d);
     let last=0,lastD='';
     for(const e of S.cb)if(e.t==='Monthly Bill'&&e.x===d&&ymd(e.d)<S.ui.start&&ymd(e.d)>=lastD){
       lastD=ymd(e.d);last=num(e.out);}
@@ -1841,8 +1861,11 @@ function settleCard(){
     <p class="sub">Each Pay writes the Cashbook entry for you. Work down the list.</p>
     <div class="row" style="margin-bottom:12px">
       <div><span class="flab">Pay from</span><br><select id="settlePot">${potOpts(S.ui.d.pot,'own')}</select></div>
-      <div><span class="flab">Dated</span><br><input type="date" id="settleDate" value="${esc(S.ui.end)}"></div>
+      <div><span class="flab">Dated</span><br><input type="date" id="settleDate" value="${esc(today())}"></div>
     </div>
+    <p class="note" style="margin:-8px 0 12px">Dated the day the money leaves your hand. Whatever date you put, it settles
+      <strong>${esc(monthName(monthOf(S.ui.start)))}</strong> &mdash; so paying last month&rsquo;s bills today clears last month
+      and still leaves today&rsquo;s cash right.</p>
     <div class="grid tiles" style="margin-bottom:14px">
       ${tile('Still to pay',money(total),total?'across all the steps below':'everything is settled',total?'':'pos')}
       ${tile('Cash on hand',money(cash),ownPots().map(p=>p.name).join(' + '),cls(cash))}
@@ -2165,7 +2188,8 @@ document.addEventListener('click',function(ev){
     const inEl=el.dataset.in?document.getElementById(el.dataset.in):null;
     const amt=num(inEl?inEl.value:el.dataset.amt);
     if(!amt){flash('Put an amount in before paying.');return;}
-    const d=($('#settleDate')&&$('#settleDate').value)||S.ui.end;
+    const d=($('#settleDate')&&$('#settleDate').value)||today();
+    const sm=monthOf(S.ui.start);
     const pot=($('#settlePot')&&$('#settlePot').value)||defaultPot();
     S.ui.d.pot=pot;
     const ty=el.dataset.t;
@@ -2177,11 +2201,12 @@ document.addEventListener('click',function(ev){
         S.cb.push({id:rid(),d,t:EPAY,x:detail,in:0,out:a2,p:pot,m:m});n++;});
       if(!n){flash('Nothing billed for that month.');return;}
     } else {
-      S.cb.push({id:rid(),d,t:ty,x:el.dataset.x,in:0,out:amt,p:pot});
+      S.cb.push({id:rid(),d,t:ty,x:el.dataset.x,in:0,out:amt,p:pot,m:sm});
     }
     el.disabled=true;note('Paying\u2026');
     saveCb([d]).then(ok=>{render();
-      if(ok)flash('Paid '+money(amt)+' \u2014 '+esc(el.dataset.x)+', out of '+pot+', dated '+d+'.');});}
+      if(ok)flash('Paid '+money(amt)+' \u2014 '+esc(el.dataset.x)+', out of '+pot+', dated '+d+
+        ', settling '+monthName(sm)+'.');});}
   else if(a==='closeAsk'){
     if(S.ui.start>today()){flash('That month has not started yet. There is nothing to close.');return;}
     S.ui.d.confirmClose=monthOf(S.ui.start);render();}
