@@ -316,7 +316,7 @@ function inHands(upto){return floatPots().reduce((a,p)=>a+potBalance(p.name,upto
    written there, so a synced folder (OneDrive, Google Drive) carries it off the
    machine without anyone remembering to do it. */
 const LS='twilight-books-v1';
-const APP_VERSION='2026.11.12';
+const APP_VERSION='2026.11.13';
 let storeOK=true;
 function readLocal(){try{const r=localStorage.getItem(LS);return r?JSON.parse(r):null;}catch(e){storeOK=false;return null;}}
 function snapshotAll(){return {v:1,savedAt:new Date().toISOString(),
@@ -1828,8 +1828,12 @@ VIEWS.settlement=function(){
 };
 
 /* ---------------------------------------------------------- settle up */
-function payLine(r,i){
-  const id='pay'+i;
+function payLine(r,i,step){
+  /* Every step used to number its inputs from zero, so the first supplier and the
+     first bill were both called "pay0". The Pay button looked its amount up by
+     that name and the browser handed back whichever came first on the page - the
+     supplier - so the bill offered to pay the supplier's figure. */
+  const id='pay'+(step||0)+'-'+i;
   return `<tr><td>${esc(r.x)}${r.guess&&r.amt?' <span class="pill">last month\u2019s amount</span>':''}
       ${r.note?`<br><span style="color:var(--muted);font-size:11px">${r.note}</span>`:''}</td>
     <td class="num">${r.over!=null
@@ -1849,7 +1853,7 @@ function payStep(n,title,why,rows,doneMsg){
   return `<div class="step"><div class="no">${n}</div><div>
     <h3>${esc(title)}${left?'':' <span class="pill pos">done</span>'}</h3><p>${why}</p>
     ${rows.length
-      ? tbl(`<th>Who / what</th><th class="num">Amount</th><th></th>`,rows.map(payLine).join(''))
+      ? tbl(`<th>Who / what</th><th class="num">Amount</th><th></th>`,rows.map((r,i)=>payLine(r,i,n)).join(''))
       : `<p class="note pos" style="margin-top:6px">Nothing left \u2014 ${esc(doneMsg)}</p>`}
   </div></div>`;}
 function settleCard(){
@@ -2185,7 +2189,13 @@ document.addEventListener('click',function(ev){
     render();}
   else if(a==='pay'){
     if(!S.db){flash('Not connected to the shared data, so nothing can be saved. Reload the page.');return;}
-    const inEl=el.dataset.in?document.getElementById(el.dataset.in):null;
+    /* Read the box in this very row. Looking it up by name would trust that no
+       two rows on the page share one, and the amounts here are too large to rest
+       on that. */
+    const row=el.closest('tr');
+    const inEl=el.dataset.in
+      ? ((row&&row.querySelector('input'))||document.getElementById(el.dataset.in))
+      : null;
     const amt=num(inEl?inEl.value:el.dataset.amt);
     if(!amt){flash('Put an amount in before paying.');return;}
     const d=($('#settleDate')&&$('#settleDate').value)||today();

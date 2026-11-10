@@ -1,6 +1,6 @@
 {
-  "version": "2026.11.12",
-  "notes": "Paying from Settle up now clears the month you are settling, dated the day the money actually leaves.",
+  "version": "2026.11.13",
+  "notes": "Fixes a Settle up clash where the Pay button could read another row amount.",
   "files": [
     "TwilightBooks.html",
     "TwilightHelper.ps1",
