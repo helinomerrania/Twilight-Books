@@ -94,7 +94,7 @@ UPDATES
 -------
 Twilight now keeps itself up to date from GitHub:
 
-    https://github.com/helinomerrania/twilight-books
+    https://github.com/helinomerrania/Twilight-Books
 
 It looks every time you start it, and the black window tells you what it
 found. There is also a "Check for updates" button at the bottom of the

@@ -20,7 +20,7 @@ $Port         = 8787
 $AllowLocalWifi = $false
 
 # Where new versions come from, and whether to look.
-$UpdateFrom      = 'https://raw.githubusercontent.com/helinomerrania/twilight-books/main'
+$UpdateFrom      = 'https://raw.githubusercontent.com/helinomerrania/Twilight-Books/main'
 $CheckForUpdates = $true
 # The ONLY files an update is ever allowed to replace. Your books are not on this
 # list and cannot be put on it from GitHub, so no update can reach what you have
