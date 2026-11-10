@@ -1,6 +1,6 @@
 {
-  "version": "2026.11.16",
-  "notes": "A lighter interface: flat surfaces, hairlines, quiet labels, and the figures made the largest thing on the page.",
+  "version": "2026.11.17",
+  "notes": "Five screens instead of seven, named after the job each one does. Nothing removed.",
   "files": [
     "TwilightBooks.html",
     "TwilightHelper.ps1",

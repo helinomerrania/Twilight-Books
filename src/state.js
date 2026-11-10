@@ -5,8 +5,8 @@ export const SEED={v:1,setup:null,cb:[],pu:[],rc:[],inv:{},ledger:[],closed:{},d
 export const S={setup:null,cb:[],pu:[],rc:[],inv:{},ledger:[],closed:{},debt:{asAt:null,brought:{}},elec:null,log:[],
          ui:{tab:'tonight',start:null,end:null,d:{},drill:null,logAll:false},db:null};
 
-export const TABS=[['tonight','Tonight'],['dashboard','Dashboard'],['cashbook','Cashbook'],
-            ['cash','Cash & counts'],['stock','Stock & suppliers'],['settlement','Settlement'],['setup','Setup']];
+export const TABS=[['tonight','Tonight'],['stock','Stock'],['month','Month'],
+  ['books','Books'],['setup','Setup']];
 
 export const IN_TYPES=['Daily Sales','Other Income','Owner Repayment','Owner Capital In'];
 
@@ -30,4 +30,4 @@ export const NIGHT_NOTE={
 
 export const LS='twilight-books-v1';
 
-export const APP_VERSION='2026.11.16';
+export const APP_VERSION='2026.11.17';

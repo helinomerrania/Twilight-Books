@@ -18,6 +18,7 @@ VIEWS.setup=function(){
       <div><label>Owner / manager</label><input value="${esc(b.owner||'')}" data-biz="owner"></div>
       <div><label>Smallest banknote</label><input type="number" step="50" value="${num(b.rounding)||250}" data-biz="rounding"></div>
     </div><p class="note">Money is rounded to the nearest ${num(b.rounding)||250} everywhere, because no smaller note exists.</p></div>
+  <div class="sectionhead"><h3>People and money</h3><span>Who is paid, who is owed, and where the cash sits</span></div>
   ${editor('Cash pots','Where the money physically sits. Mark a pot as a <strong>float</strong> when a person is holding the cash — it stays yours, but out of your hand, and it never touches payroll.',
     pots(),[{label:'Pot',k:'name'},{label:'Kind',k:'kind',opts:()=>['own','float']}],'addPot','delPot','pots')}
   ${editor('Partners','Shares must total 100% — currently '+(shares*100).toFixed(0)+'%.',
@@ -30,6 +31,7 @@ VIEWS.setup=function(){
     (S.setup.suppliers||[]).map(s=>({name:s})),[{label:'Supplier',k:'name'}],'addSupplier','delSupplier','suppliers')}
   ${editor('Daily expense categories','What you can tap on the Tonight tab. The first ten show as buttons.',
     (typeDetails('Daily Expense')||[]).map(s=>({name:s})),[{label:'Category',k:'name'}],'addCat','delCat','expcats')}
+  <div class="sectionhead"><h3>Stock</h3><span>What you count, how it converts, what it is worth</span></div>
   ${editor('Stock items','Category, unit, price, supplier and pack size. A price change moves open months only.',
     S.setup.stockItems||[],[{label:'Item',k:'name'},{label:'Category',k:'category',opts:()=>cats},
       {label:'Unit',k:'unit'},{label:'Price',k:'price',num:true},
@@ -46,8 +48,10 @@ VIEWS.setup=function(){
       <div><label>Buckets per ice cream carton</label><input type="number" value="${num(cv.bucketsPerCarton)}" data-conv="bucketsPerCarton"></div>
     </div>
     <p class="note">1 carton = ${num(cv.blocksPerCarton)} blocks = ${num(cv.blocksPerCarton)*num(cv.packsPerBlock)} packs = ${(num(cv.blocksPerCarton)*num(cv.packsPerBlock)*num(cv.gramsPerPack)/(num(cv.gramsPerKilo)||1000))||0} kg.</p></div>
+  <div class="sectionhead"><h3>Rarely changed</h3><span>Set once, then left alone</span></div>
   ${editor('Cash difference reasons','The list on the Tonight tab.',(S.setup.reasons||[]).map(s=>({name:s})),
     [{label:'Reason',k:'name'}],'addReason','delReason','reasons')}
+  <div class="sectionhead"><h3>This app</h3><span>Where the books are kept, and the version you are running</span></div>
   <div class="card"><h2>This copy of the books</h2>
     <p class="sub">Everything is stored in this browser, on this computer. Nothing goes anywhere else.</p>
     <p class="note" id="bkStatus" style="margin:0 0 10px">${esc(bkText())}</p>

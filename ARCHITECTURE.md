@@ -23,13 +23,32 @@ build. A test fails if the committed file is not what `src/` builds.
 ## The layers
 
 ```
-src/util/     money, dates, cloning          - knows nothing about anything else
-src/core/     the money: stock, cost of goods, electricity, payroll,
-              partners, suppliers, settlement, the checks
-src/store/    where the books live: this browser, the folder, the change log
-src/ui/       screens, printing, what a click does
-src/boot.js   wiring, and the first render
+src/util/      money, dates, cloning         - knows nothing about anything else
+src/core/      the money: stock, cost of goods, electricity, payroll,
+               partners, suppliers, settlement, the checks
+src/store/     where the books live: this browser, the folder, the change log
+src/ui/cards/  one card, one function - a self-contained piece of screen
+src/ui/views/  a tab: a list of the cards it draws, and nothing else
+src/boot.js    wiring, and the first render
 ```
+
+## Tabs are jobs, not tables
+
+There are five screens because there are five jobs, and they are named after
+the job rather than after the data they happen to read:
+
+| | |
+|---|---|
+| **Tonight** | the nightly round: what is wrong, sales, what went out, count the box |
+| **Stock** | what arrived, what is left, what is owed for it |
+| **Month** | worked top to bottom once a month: result, checks, where the money went, electricity, settle up, close |
+| **Books** | every entry, every count, everything changed - where things get corrected |
+| **Setup** | the roster, the prices, the app itself |
+
+A view is a list of card calls and nothing else, so moving something from one
+screen to another is editing one line. Tests hold that shape: a view may not
+write its own markup, no card may be drawn on two screens, every card must be
+drawn somewhere, and Tonight may draw at most four things.
 
 Dependencies only point downwards. `core/` never reaches into `store/` or `ui/`,
 which is what lets the tests load the whole of `core/` in Node with no browser

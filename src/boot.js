@@ -22,6 +22,7 @@ document.addEventListener('click',function(ev){
   const a=el.dataset.act;
   const go=()=>{saveSetup();render();};
   if(a==='checkUpdate'){checkUpdate(el);return;}
+  if(a==='goTab'){S.ui.tab=el.dataset.to;render();window.scrollTo(0,0);return;}
   if(a==='undo'){undoLog(el.dataset.i);}
   else if(a==='logAll'){S.ui.logAll=!S.ui.logAll;render();}
   else if(a==='printLog'){printSlip(slipLog());}
