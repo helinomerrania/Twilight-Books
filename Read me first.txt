@@ -1,0 +1,116 @@
+TWILIGHT — the books, on the lounge computer and from home
+
+ONE SET OF BOOKS
+----------------
+The books are the file twilight-books.json in this folder. They are not
+inside any browser. Every device reads and writes that one file, so the
+lounge and home can never end up with two different versions.
+
+If a device has been working while the helper was closed, its newer work
+wins when it reconnects. Nothing is thrown away.
+
+
+SET UP ON THE LOUNGE COMPUTER (once)
+------------------------------------
+1. Put every file from this zip into the folder your backups already go to,
+   the one inside OneDrive that holds twilight-books.json.
+
+2. Double-click  Start Twilight.bat
+
+   A small black window opens and says "Twilight is running".
+   Twilight opens in its own window — no tabs, no address bar, its own
+   moon icon on the taskbar.
+
+   If Windows asks about the firewall, choose ALLOW on private networks.
+
+3. While it is open, right-click the moon on the taskbar -> Pin to taskbar.
+   That icon is how you open the books from now on.
+
+
+TO REACH IT FROM HOME (once)
+----------------------------
+4. On the LOUNGE computer: install Tailscale from  tailscale.com/download
+   Sign in (a Google account is easiest).
+
+5. On your PHONE or HOME computer: install Tailscale and sign in with the
+   SAME account.
+
+6. Close the black window and double-click Start Twilight.bat again.
+   It now shows a second line like:
+
+        From home : http://100.84.12.9:8787/
+
+7. At home, open that address in Chrome. The books appear, the same ones.
+   On a phone, use Chrome's menu -> "Add to Home screen" to get the icon.
+
+Two things to know:
+  - The lounge computer must be ON with the black window open. Set it never
+    to sleep: Settings -> System -> Power -> Screen and sleep -> Never.
+  - Nothing is on the open internet. Only devices signed into your own
+    Tailscale account can reach it. Anything else is refused.
+    The shop wifi is refused too.
+
+
+EVERY NIGHT
+-----------
+One click on the icon. Work as usual. Nothing ever asks permission.
+
+If you enter something at home, the lounge window updates itself within a
+few seconds, and says so. It works the other way round too.
+
+
+WHAT GETS WRITTEN
+-----------------
+Into this folder, after every change:
+
+    twilight-books.json              always the latest
+    twilight-books-2026-10-05.json   one per day, named for the day
+
+OneDrive carries them off the computer by itself.
+
+
+IF SOMETHING LOOKS WRONG
+------------------------
+"Could not start on port 8787"
+    Twilight is already running. Look for the other black window.
+
+"From home: not available yet"
+    Tailscale is not running on the lounge computer. Start it, then close
+    and reopen the black window.
+
+Home says the page cannot be reached
+    The lounge computer is off, asleep, or its black window is closed.
+
+The page says the helper is not answering
+    The black window was closed. Your work is safe in the browser; reopen
+    Start Twilight.bat and it catches up by itself.
+
+Nothing happens when you double-click
+    Right-click Start Twilight.bat -> Properties. If there is an "Unblock"
+    box near the bottom, tick it and press OK.
+
+
+UPDATES
+-------
+Twilight now keeps itself up to date from GitHub:
+
+    https://github.com/helinomerrania/twilight-books
+
+It looks every time you start it, and the black window tells you what it
+found. There is also a "Check for updates" button at the bottom of the
+Setup tab.
+
+An update NEVER touches your books. The helper keeps its own list of the
+files it is allowed to replace - the app, the helper, the icons - and no
+books file is on that list. Whatever is published on GitHub, an update
+cannot reach twilight-books.json or any of the dated copies.
+
+The copy it replaced is kept in a folder called "previous-version", so
+going back is a drag-and-drop away.
+
+If the helper itself changed, it waits beside itself as
+TwilightHelper.ps1.new and is moved into place next time you start.
+
+To stop it looking, open TwilightHelper.ps1 and set
+
+    $CheckForUpdates = $false

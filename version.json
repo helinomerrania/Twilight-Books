@@ -1,0 +1,15 @@
+{
+  "version": "2026.11.10",
+  "notes": "Electricity paid as a Monthly Bill now counts against Still to Pay. New check for a pot going below zero.",
+  "files": [
+    "TwilightBooks.html",
+    "TwilightHelper.ps1",
+    "Start Twilight.bat",
+    "manifest.json",
+    "icon.png",
+    "icon-192.png",
+    "icon-48.png",
+    "favicon.ico",
+    "Read me first.txt"
+  ]
+}

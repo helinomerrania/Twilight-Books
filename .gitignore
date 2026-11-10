@@ -1,0 +1,10 @@
+# The books never belong on GitHub.
+twilight-books.json
+twilight-books-*.json
+twilight-books.tmp
+*.bak
+
+# Written by the updater
+.twilight-update/
+previous-version/
+TwilightHelper.ps1.new
