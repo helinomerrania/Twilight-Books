@@ -1,6 +1,6 @@
 {
-  "version": "2026.11.10",
-  "notes": "Electricity paid as a Monthly Bill now counts against Still to Pay. New check for a pot going below zero.",
+  "version": "2026.11.11",
+  "notes": "Your books are copied aside before an update is applied, so it can always be undone.",
   "files": [
     "TwilightBooks.html",
     "TwilightHelper.ps1",

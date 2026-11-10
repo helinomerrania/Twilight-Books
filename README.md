@@ -45,13 +45,29 @@ nothing is exposed to the open internet, and that is deliberate.
 The helper checks this repository every time it starts, and there is a
 **Check for updates** button in Setup.
 
-An update replaces only the files listed in `version.json`, and only those that
-appear on the helper's own allow-list — `$UpdatableFiles` near the top of
-`TwilightHelper.ps1`. **No books file is on that list and none can be added to it
-from here**, so an update cannot reach what you have entered. The copy being
-replaced is kept in a `previous-version` folder.
+**Before it applies anything, it copies your books to
+`twilight-books-before-<version>.json`.** If that copy cannot be made, the update
+does not happen at all. That is the guarantee worth having, because it holds
+whatever goes wrong — a wrong file list, a bad build, a mistake by whoever
+published it. The books as they were are still sitting in the folder.
 
-To turn updating off, set `$CheckForUpdates = $false`.
+Two further guards, narrower than they look:
+
+- An update replaces only files named in `version.json` **and** present on the
+  helper's own `$UpdatableFiles` list, so naming a books file here cannot reach
+  one on somebody's machine.
+- The downloaded app is rejected unless it carries the right marker and is a
+  plausible size, and everything is fetched and checked before any local file is
+  touched. What gets replaced is kept in a `previous-version` folder.
+
+Neither of those protects against bad code being published. `TwilightHelper.ps1`
+is itself on the updatable list, so an update can replace the file holding the
+list; and the app can already write to the books through `/save`, because that is
+how saving works. Running an auto-updater means trusting whoever can push here —
+that is true of all of them. The snapshot is what makes the trust recoverable.
+
+To turn updating off, set `$CheckForUpdates = $false` near the top of
+`TwilightHelper.ps1`.
 
 ## Your data is not here
 

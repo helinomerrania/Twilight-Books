@@ -126,6 +126,22 @@ function Update-Twilight {
         return @{ status = 'error'; version = $localVer; error = $_.Exception.Message }
     }
 
+    # The books are set aside before anything at all is applied. If that cannot
+    # be done the update does not happen: an update that cannot be undone is not
+    # worth having. This guards the books whatever goes wrong - a wrong file list,
+    # a bad app, a helper that misbehaves - because it runs before any of them do.
+    $snap = $null
+    if (Test-Path $mainFile) {
+        $safe = ($remote.version -replace '[^0-9A-Za-z._-]', '_')
+        $snap = Join-Path $BackupFolder ("twilight-books-before-$safe.json")
+        try { Copy-Item -LiteralPath $mainFile -Destination $snap -Force }
+        catch {
+            try { Remove-Item $stage -Recurse -Force } catch {}
+            return @{ status = 'error'; version = $localVer
+                      error = 'could not set the books aside first, so nothing was changed' }
+        }
+    }
+
     # Keep the copy being replaced, so going back is a drag-and-drop away.
     $backup = Join-Path $here 'previous-version'
     if (Test-Path $backup) { try { Remove-Item $backup -Recurse -Force } catch {} }
@@ -149,7 +165,8 @@ function Update-Twilight {
     [IO.File]::WriteAllText((Join-Path $here 'version.json'), $r.Content, $utf8)
     try { Remove-Item $stage -Recurse -Force } catch {}
     return @{ status = 'updated'; from = $localVer; version = $remote.version
-              notes = $remote.notes; helper = $helperChanged }
+              notes = $remote.notes; helper = $helperChanged
+              books = $(if ($snap) { Split-Path $snap -Leaf } else { '' }) }
 }
 
 function Test-Allowed([string]$ip) {
@@ -198,6 +215,7 @@ if ($CheckForUpdates) {
             Write-Host ("  Updated {0} -> {1}" -f $u.from, $u.version) -ForegroundColor Green
             if ($u.notes)  { Write-Host ("    {0}" -f $u.notes) }
             if ($u.helper) { Write-Host "    The helper changed too - close this window and start it again." -ForegroundColor Yellow }
+            if ($u.books) { Write-Host ("    Your books were copied to {0} first." -f $u.books) }
             Write-Host "    The copy it replaced is in the 'previous-version' folder."
         }
         'current' { Write-Host ("  Version {0} - up to date." -f $u.version) -ForegroundColor DarkGray }

@@ -316,7 +316,7 @@ function inHands(upto){return floatPots().reduce((a,p)=>a+potBalance(p.name,upto
    written there, so a synced folder (OneDrive, Google Drive) carries it off the
    machine without anyone remembering to do it. */
 const LS='twilight-books-v1';
-const APP_VERSION='2026.11.10';
+const APP_VERSION='2026.11.11';
 let storeOK=true;
 function readLocal(){try{const r=localStorage.getItem(LS);return r?JSON.parse(r):null;}catch(e){storeOK=false;return null;}}
 function snapshotAll(){return {v:1,savedAt:new Date().toISOString(),
@@ -496,10 +496,11 @@ async function checkUpdate(el){
     const r=await fetch('update',{cache:'no-store'});
     const j=await r.json();
     if(j.status==='updated'){
+      const kept=j.books?' Your books were copied to '+j.books+' first.':'';
       if(BK.dirty||BK.pending)
-        say('Updated to '+j.version+'. Close and reopen Twilight to start using it.');
-      else{say('Updated to '+j.version+' \u2014 reloading\u2026');
-        setTimeout(function(){location.reload();},1200);}
+        say('Updated to '+j.version+'.'+kept+' Close and reopen Twilight to start using it.');
+      else{say('Updated to '+j.version+'.'+kept+' Reloading\u2026');
+        setTimeout(function(){location.reload();},1800);}
     }
     else if(j.status==='current')say('This is already the newest ('+j.version+').');
     else if(j.status==='offline')say('Could not reach GitHub just now. Nothing was changed.');
@@ -1932,7 +1933,7 @@ VIEWS.setup=function(){
   <div class="card"><h2>Version</h2>
     <p class="sub">This copy is <strong>${esc(APP_VERSION)}</strong>.</p>
     ${BK.mode==='helper'
-      ? `<p class="note">New versions come from GitHub. Twilight looks every time you start it, and you can look now. Your books are never touched by an update.</p>
+      ? `<p class="note">New versions come from GitHub. Twilight looks every time you start it, and you can look now. Your books are copied aside before anything is applied, so an update can always be undone.</p>
          <p><button class="btn ghost" data-act="checkUpdate">Check for updates</button>
          <span id="updmsg" class="note"></span></p>`
       : `<p class="note">Updating needs the Twilight window running on the lounge computer.</p>`}

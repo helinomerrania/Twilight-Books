@@ -92,21 +92,31 @@ Nothing happens when you double-click
 
 UPDATES
 -------
-Twilight now keeps itself up to date from GitHub:
+Twilight keeps itself up to date from
 
     https://github.com/helinomerrania/Twilight-Books
 
 It looks every time you start it, and the black window tells you what it
-found. There is also a "Check for updates" button at the bottom of the
-Setup tab.
+found. There is also a "Check for updates" button at the bottom of Setup.
 
-An update NEVER touches your books. The helper keeps its own list of the
-files it is allowed to replace - the app, the helper, the icons - and no
-books file is on that list. Whatever is published on GitHub, an update
-cannot reach twilight-books.json or any of the dated copies.
+BEFORE an update is applied, your books are copied to
 
-The copy it replaced is kept in a folder called "previous-version", so
-going back is a drag-and-drop away.
+    twilight-books-before-<version>.json
+
+in this folder. If that copy cannot be made, the update does not happen at
+all. So whatever an update turns out to have done, the books as they were
+are still here, and putting them back is a rename away.
+
+Two narrower guards as well: an update can only replace files on the
+helper's own list ($UpdatableFiles, near the top of TwilightHelper.ps1),
+and no books file is on it; and the copy it replaced is kept in a folder
+called "previous-version".
+
+Be clear about what that does not cover. The helper is on its own list, so
+an update can replace the thing holding the list, and the app can already
+write to your books because that is how saving works. An auto-updater
+means trusting whoever can push to the repository. The copy taken first is
+what makes that trust safe to give.
 
 If the helper itself changed, it waits beside itself as
 TwilightHelper.ps1.new and is moved into place next time you start.
