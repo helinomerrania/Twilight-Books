@@ -8,125 +8,250 @@
 <body>
 <!-- twilight-books-app -->
 <title>Twilight Books</title>
-<meta name="theme-color" content="#7c3a12">
+<meta name="theme-color" content="#4b3f8f">
 <link rel="icon" type="image/png" href="data:image/png;base64,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">
 <link rel="apple-touch-icon" href="data:image/png;base64,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">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600&family=Public+Sans:wght@400;500;600;700&display=swap">
-<style>
-/* Layout: sticky ledger header with a scrollable tab rail; one measured column, wide tables scroll inside their own boxes. */
+<style>/* Twilight — a cash book used after midnight, mostly to answer one question at a
+   time: what came in, what went out, does the box tie. So the money is the only
+   thing allowed to be large. Everything else is a hairline and small type.
+   One accent, named for the hour the place is named for, used only to mark what
+   you do next. No shadows, no fills, no shouting labels. */
 :root{
-  --bg:#f4f2ee; --surface:#fffefb; --surface2:#efece6; --ink:#1d1b16; --muted:#6f6a5e; --line:#e0dbd0;
-  --accent:#9c4a17; --accent-soft:#f0e3d7; --good:#2f6b43; --warn:#8a6412; --bad:#9c2f2a;
-  --float:#4a5d8f;
-  --shadow:0 1px 2px rgba(29,27,22,.06),0 4px 14px rgba(29,27,22,.05);
-  --display:'Spectral',Georgia,serif; --body:'Public Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-  --r:10px;
+  --paper:#fcfcfd; --raised:#fff; --sunk:#f4f5f8;
+  --ink:#1a1c23; --muted:#71747f; --faint:#9a9ca5;
+  --line:#e7e8ee; --edge:#d4d6de;
+  --accent:#4b3f8f; --on-accent:#fff; --wash:#f0eefa;
+  --pos:#1d7a4e; --neg:#b4332e; --warn:#876610; --float:#3b5ea8;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI Variable Text','Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --r:9px; --gut:20px;
+  color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#141310; --surface:#1e1c18; --surface2:#26231e; --ink:#ece7dd; --muted:#9d968a; --line:#332f28;
-  --accent:#e08a43; --accent-soft:#3a2a1a; --good:#6cbd85; --warn:#d9a83f; --bad:#e2796f; --float:#8fa3d6;
-  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.3); color-scheme:dark}}
+  --paper:#131419; --raised:#1a1c22; --sunk:#202229;
+  --ink:#e9eaf0; --muted:#9a9db0; --faint:#6e7180;
+  --line:#272932; --edge:#383b47;
+  --accent:#9b8fe8; --on-accent:#17151f; --wash:#22203a;
+  --pos:#5cc08a; --neg:#f0837c; --warn:#d6aa4c; --float:#8aa6e8;
+  color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#141310; --surface:#1e1c18; --surface2:#26231e; --ink:#ece7dd; --muted:#9d968a; --line:#332f28;
-  --accent:#e08a43; --accent-soft:#3a2a1a; --good:#6cbd85; --warn:#d9a83f; --bad:#e2796f; --float:#8fa3d6;
-  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.3); color-scheme:dark}
+  --paper:#131419; --raised:#1a1c22; --sunk:#202229;
+  --ink:#e9eaf0; --muted:#9a9db0; --faint:#6e7180;
+  --line:#272932; --edge:#383b47;
+  --accent:#9b8fe8; --on-accent:#17151f; --wash:#22203a;
+  --pos:#5cc08a; --neg:#f0837c; --warn:#d6aa4c; --float:#8aa6e8;
+  color-scheme:dark}
 
 *{box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.45;margin:0}
-h1,h2,h3{font-family:var(--display);font-weight:600;text-wrap:balance;margin:0}
-.wrap{max-width:1120px;margin:0 auto;padding-inline:16px;padding-block:0 56px}
-header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:var(--bg);border-bottom:1px solid var(--line)}
-.topbar{max-width:1120px;margin:0 auto;padding:12px 16px 0;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:baseline}
-.brand{font-family:var(--display);font-size:20px;font-weight:600;letter-spacing:.2px}
-.brand small{font-family:var(--body);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);display:block;font-weight:600}
-.topstat{margin-left:auto;display:flex;gap:18px;flex-wrap:wrap}
-.topstat div{text-align:right}
-.topstat .k{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
-.topstat .v{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
-nav{max-width:1120px;margin:0 auto;padding:8px 16px 0;display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
-nav::-webkit-scrollbar{display:none}
-nav button{flex:0 0 auto;background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);
-  font-family:var(--body);font-size:13px;font-weight:600;padding:8px 12px 9px;cursor:pointer;white-space:nowrap}
-nav button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
-nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--sans);font-size:14px;line-height:1.5;
+  -webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;font-weight:650;letter-spacing:-.011em;text-wrap:balance}
+h2{font-size:17px}
+h3{font-size:14px}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
-section.tab{padding-top:20px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-bottom:16px}
-.card>h2{font-size:15px;margin-bottom:2px}
-.card>p.sub{color:var(--muted);font-size:12px;margin:0 0 12px}
-.grid{display:grid;gap:12px}
+/* every figure in the book lines up, whatever screen it is on */
+.num,.v,.n,.tot,.big,.bal,.cdiff,td.num,th.num,input[type=number],input[type=date]{
+  font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+/* ---------- the rail at the top ---------- */
+.wrap{max-width:960px;margin:0 auto;padding:0 var(--gut) 72px}
+header.top{position:sticky;top:0;z-index:30;background:var(--paper);border-bottom:1px solid var(--line)}
+.topbar{max-width:960px;margin:0 auto;padding:14px var(--gut) 0;
+  display:flex;flex-wrap:wrap;gap:6px 20px;align-items:flex-end}
+.brand{font-size:16px;font-weight:650;letter-spacing:-.01em;line-height:1.2}
+.brand small{display:block;font-size:11px;font-weight:500;color:var(--faint);letter-spacing:0}
+.topstat{margin-left:auto;display:flex;gap:20px;flex-wrap:wrap}
+.topstat div{text-align:right;line-height:1.25}
+.topstat .k{font-size:11px;color:var(--muted);font-weight:450}
+.topstat .v{font-size:17px;font-weight:600;letter-spacing:-.02em}
+nav{max-width:960px;margin:0 auto;padding:10px var(--gut) 0;display:flex;gap:18px;
+  overflow-x:auto;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{flex:0 0 auto;background:none;border:0;padding:0 0 9px;cursor:pointer;
+  color:var(--muted);font:inherit;font-size:13.5px;font-weight:500;
+  border-bottom:2px solid transparent;margin-bottom:-1px}
+nav button:hover{color:var(--ink)}
+nav button[aria-selected="true"]{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
+section.tab{padding-top:26px}
+
+/* ---------- a group of things that belong together ---------- */
+.card{background:var(--raised);border:1px solid var(--line);border-radius:var(--r);
+  padding:18px 20px;margin-bottom:16px}
+.card>h2{margin-bottom:2px}
+.cardhead{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.sub{color:var(--muted);font-size:13px;margin:2px 0 14px}
+.note{color:var(--muted);font-size:12.5px;margin:8px 0 0}
+.note.pos{color:var(--pos)}
+.banner{background:var(--wash);border:1px solid var(--line);border-radius:var(--r);
+  padding:11px 14px;margin:0 0 16px;font-size:13px;color:var(--ink)}
+.note.warnc,.warnc{background:none;border:0;border-left:2px solid var(--neg);border-radius:0;
+  padding:2px 0 2px 11px;margin:10px 0 0;color:var(--neg);font-size:12.5px}
+.empty{color:var(--faint);font-size:13px;padding:18px 0;text-align:center}
+
+/* ---------- figures ---------- */
+.grid{display:grid;gap:14px}
 .tiles{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
-.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;min-width:0}
-.tile .k{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
-.tile .v{font-size:21px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:3px;letter-spacing:-.4px}
-.tile .n{font-size:11px;color:var(--muted);margin-top:2px}
-.pos{color:var(--good)}.neg{color:var(--bad)}.warnc{color:var(--warn)}.floatc{color:var(--float)}
-.tblbox{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
-table{border-collapse:collapse;width:100%;font-size:13px}
-th{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;text-align:left;
-  padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface2)}
-td{padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tile{background:none;border:0;border-top:2px solid var(--line);padding:11px 0 0}
+.tile .k{font-size:11.5px;color:var(--muted);font-weight:450;letter-spacing:0}
+.tile .v{display:block;font-size:25px;font-weight:600;letter-spacing:-.028em;line-height:1.2;margin-top:3px}
+.tile .n{display:block;font-size:11.5px;margin-top:3px;color:var(--faint);line-height:1.35}
+.tile .v.pos,.pos{color:var(--pos)}
+.tile .v.neg,.neg{color:var(--neg)}
+.floatc{color:var(--float)}
+.big{font-size:25px;font-weight:600;letter-spacing:-.028em}
+
+/* ---------- tables ---------- */
+.tblbox{overflow-x:auto;margin:0 -4px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;font-weight:500;font-size:11.5px;color:var(--muted);
+  padding:0 10px 7px;border-bottom:1px solid var(--edge);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
 tr:last-child td{border-bottom:0}
-td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
-tbody tr.tot td{font-weight:700;background:var(--surface2)}
-input,select,button.btn{font-family:var(--body);font-size:13px;color:var(--ink);background:var(--surface);
-  border:1px solid var(--line);border-radius:8px;padding:7px 9px;min-width:0}
-input[type=number]{font-variant-numeric:tabular-nums;text-align:right}
-td input,td select{padding:4px 6px;width:100%;background:transparent;border-color:transparent}
-td input:hover,td select:hover{border-color:var(--line)}
-td input:focus,td select:focus{background:var(--surface);border-color:var(--accent)}
-.entry{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));align-items:end;margin-bottom:14px}
-.entry label,.flab{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:3px}
+.num{text-align:right;white-space:nowrap}
+tr.tot td,td.tot,.tot{font-weight:650;border-top:1px solid var(--edge)}
+tbody tr:hover td{background:var(--sunk)}
+
+/* ---------- things you press ---------- */
+.btn{display:inline-flex;align-items:center;gap:6px;border-radius:7px;cursor:pointer;
+  font:inherit;font-size:13.5px;font-weight:550;padding:8px 15px;
+  border:1px solid var(--edge);background:var(--raised);color:var(--ink);
+  transition:background .12s,border-color .12s}
+.btn:hover{border-color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:none}
+.btn.big2{font-size:15px;padding:11px 20px}
+.btn[disabled]{opacity:.45;cursor:default}
+.mini{font:inherit;font-size:12px;font-weight:500;padding:4px 9px;border-radius:6px;cursor:pointer;
+  border:1px solid var(--edge);background:var(--raised);color:var(--muted)}
+.mini:hover{color:var(--ink);border-color:var(--ink)}
+.quick{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
+.quick .mini{border-radius:999px;padding:6px 13px;font-size:12.5px;color:var(--ink)}
+.quick button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);
+  color:var(--on-accent);font-weight:600}
+
+/* ---------- fields ---------- */
+input,select,textarea{font:inherit;font-size:14px;color:var(--ink);background:var(--raised);
+  border:1px solid var(--edge);border-radius:7px;padding:8px 11px;max-width:100%}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent)}
+input[type=number]{text-align:right}
+.row{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end}
+.entry{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px 16px}
+.entry label,.flab{display:block;font-size:11.5px;color:var(--muted);font-weight:450;margin-bottom:4px}
+.blocklab{font-size:11.5px;color:var(--muted);font-weight:500;margin:16px 0 7px}
+.potgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+
+/* ---------- small marks ---------- */
+.pill{display:inline-block;font-size:11px;font-weight:550;padding:2px 8px;border-radius:999px;
+  border:1px solid var(--edge);color:var(--muted);white-space:nowrap}
+.pill.pos{border-color:var(--pos);color:var(--pos)}
+.badge{font-size:11px;color:var(--muted)}
+.dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--muted);margin-right:7px;flex:0 0 auto}
+.dot.ok{background:var(--pos)}.dot.warn{background:var(--warn)}.dot.bad{background:var(--neg)}
+
+/* ---------- the settle-up sequence (it really is a sequence) ---------- */
+.steps{display:grid;gap:22px}
+.step{display:grid;grid-template-columns:22px 1fr;gap:12px;align-items:start}
+.step .no{font-size:12px;font-weight:600;color:var(--accent);line-height:1.7;
+  font-variant-numeric:tabular-nums}
+.step h3{margin-bottom:1px}
+.step p{margin:0 0 9px;color:var(--muted);font-size:12.5px}
+
+/* ---------- where the money went ---------- */
+.flowg{margin-bottom:20px}
+.flowh{display:flex;align-items:baseline;gap:10px;
+  font-size:12.5px;font-weight:600;color:var(--ink);
+  padding-bottom:7px;border-bottom:1px solid var(--edge);margin-bottom:6px}
+.flowh .val{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:650}
+.flowh .mini{flex:0 0 auto}
+.barbtn,.bar{display:grid;grid-template-columns:minmax(120px,1fr) minmax(0,1.3fr) auto;gap:14px;
+  align-items:center;width:100%;text-align:left;font:inherit;font-size:13.5px;
+  background:none;border:0;border-bottom:1px solid var(--line);padding:9px 2px;cursor:pointer;color:var(--ink)}
+.barbtn:hover{background:var(--sunk)}
+.barbtn>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.barbtn .track,.bar .track{display:block;height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+.barbtn .fill,.bar .fill{display:block;height:5px;background:var(--accent);border-radius:3px}
+.barbtn .val,.bar .val,.barbtn .num,.bar .num{text-align:right;white-space:nowrap;
+  min-width:104px;font-variant-numeric:tabular-nums}
+.caret{color:var(--faint);font-size:11px}
+.drill{background:var(--sunk);border-radius:var(--r);padding:12px 14px;margin:6px 0 14px}
+
+/* ---------- recent changes ----------
+   A row per thing that happened. The kind of change is a mark down the left
+   rather than a colour on the words, so the sentence stays readable. */
+.logs{display:grid;gap:0}
+.logrow{display:grid;grid-template-columns:54px minmax(0,1fr) auto;gap:12px;align-items:baseline;
+  padding:9px 2px 9px 10px;border-bottom:1px solid var(--line);font-size:13px;
+  border-left:2px solid transparent}
+.logrow:last-child{border-bottom:0}
+.logrow.add{border-left-color:var(--pos)}
+.logrow.del{border-left-color:var(--neg)}
+.logrow.edit{border-left-color:var(--warn)}
+.logt{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;line-height:1.35}
+.logs2{color:var(--ink);font-size:12.5px}
+.logs2 strong{font-weight:600}
+.logw{display:inline-block;font-size:10.5px;color:var(--muted);
+  border:1px solid var(--line);border-radius:999px;padding:1px 7px;margin-left:5px;white-space:nowrap}
+
+/* ---------- the list of checks ---------- */
+.checks{display:grid;gap:0}
+.check{display:flex;gap:2px;align-items:baseline;padding:9px 2px;border-bottom:1px solid var(--line);font-size:13.5px}
+.check:last-child{border-bottom:0}
+.check .val{color:var(--muted);font-size:12.5px}
+
+/* ---------- the folder question, asked once ---------- */
+#gate{position:fixed;inset:0;z-index:100;background:rgba(10,11,15,.55);
+  display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px)}
+.gatebox{background:var(--raised);border:1px solid var(--line);border-radius:14px;
+  padding:26px;max-width:460px;width:100%}
+
+/* ---------- counting each place the money sits ---------- */
+.pot{background:var(--raised);border:1px solid var(--line);border-left:2px solid var(--edge);
+  border-radius:var(--r);padding:12px 14px}
+.pot.isfloat{border-left-color:var(--float)}
+.pot .nm{font-size:12.5px;font-weight:550}
+.pot .bal{display:block;font-size:21px;font-weight:600;letter-spacing:-.025em;margin-top:1px}
+.pot .sub{font-size:11.5px;margin:0;color:var(--faint)}
+.pot input{width:100%;margin-top:9px}
+.cdiff{font-size:12.5px;font-weight:550;margin-top:6px}
+
+/* a field inside a table stays quiet until you are in it */
 .entry input,.entry select{width:100%}
-button.btn{cursor:pointer;font-weight:600}
-button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-button.ghost{background:transparent}
-button.mini{padding:3px 7px;font-size:11px;border-radius:6px;background:transparent;border:1px solid var(--line);cursor:pointer;color:var(--muted);font-family:var(--body)}
-button.mini:hover{color:var(--bad);border-color:var(--bad)}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.pill{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
-  padding:2px 7px;border-radius:999px;border:1px solid currentColor}
-.badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
-  padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent);margin-left:8px;vertical-align:middle}
-.barbtn .track{background:var(--surface2);border-radius:4px;height:14px;overflow:hidden;display:block}
-.barbtn .fill{background:var(--accent);height:100%;border-radius:4px;display:block}
-.barbtn[aria-expanded="true"] .track{background:var(--surface)}
-.checks{display:grid;gap:6px}
-.check{display:flex;gap:9px;align-items:baseline;font-size:12px;padding:7px 10px;border-radius:7px;background:var(--surface2)}
-.check .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto;background:var(--good);transform:translateY(-1px)}
-.check.bad{background:color-mix(in srgb,var(--bad) 10%,var(--surface2))}
-.check.bad .dot{background:var(--bad)}
-.check.warn{background:color-mix(in srgb,var(--warn) 12%,var(--surface2))}
-.check.warn .dot{background:var(--warn)}
-.note{font-size:12px;color:var(--muted);margin:8px 0 0}
-.blocklab{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);font-weight:700;margin:18px 0 6px}
-.empty{padding:34px 16px;text-align:center;color:var(--muted);font-size:13px}
-.banner{border:1px solid var(--line);background:var(--surface2);border-radius:var(--r);padding:10px 12px;font-size:12px;color:var(--muted);margin-bottom:14px}
-/* nightly close */
-.big{font-size:26px!important;font-weight:700;padding:12px 14px!important;text-align:right;width:100%}
-.quick{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
-.quick button{font-family:var(--body);font-size:12px;font-weight:600;padding:6px 11px;border-radius:999px;
-  border:1px solid var(--line);background:var(--surface2);color:var(--ink);cursor:pointer}
-.quick button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
-.potgrid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
-.pot{border:1px solid var(--line);border-radius:var(--r);padding:11px 12px;background:var(--surface)}
-.pot.isfloat{border-left:3px solid var(--float)}
-.pot .nm{font-size:12px;font-weight:700}
-.pot .bal{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
-.pot .sub{font-size:11px;color:var(--muted)}
-.pot input{width:100%;margin-top:6px}
-.steps{display:grid;gap:0}
-.step{display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;padding:10px 0;border-top:1px solid var(--line)}
-.step>div{min-width:0}
 .row>div{min-width:0}
+td input,td select{width:100%;padding:5px 7px;background:transparent;border-color:transparent}
+td input:hover,td select:hover{border-color:var(--edge)}
+td input:focus,td select:focus{background:var(--raised);border-color:var(--accent)}
+.barbtn[aria-expanded="true"]{background:var(--sunk)}
+.barbtn[aria-expanded="true"] .track .fill{background:var(--ink)}
+.check.bad .dot{background:var(--neg)}
+.check.warn .dot{background:var(--warn)}
+.check .dot{background:var(--pos);transform:translateY(-1px)}
 .step:first-child{border-top:0}
-.step .no{font-family:var(--display);font-size:15px;font-weight:600;color:var(--accent);line-height:1.3}
-.step h3{font-size:13px}
-.step p{margin:2px 0 0;font-size:12px;color:var(--muted)}
-.cardhead{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
 .cardhead h2{margin:0}
+
+/* ---------- phone ---------- */
+@media (max-width:640px){
+  :root{--gut:16px}
+  .topbar{padding-top:12px;gap:4px 14px}
+  .topstat{gap:14px;width:100%;margin-left:0;justify-content:space-between}
+  .topstat div{text-align:left}
+  .topstat .v{font-size:15px}
+  .card{padding:15px 16px;border-radius:var(--r)}
+  .tile .v,.big{font-size:22px}
+  .barbtn,.bar{grid-template-columns:1fr 92px auto;gap:9px}
+  .barbtn .track,.bar .track{display:none}
+  .logrow{grid-template-columns:48px minmax(0,1fr);gap:8px}
+  .logrow>span:last-child{grid-column:1/-1;justify-self:end}
+  .step{grid-template-columns:18px 1fr;gap:9px}
+  th,td{padding-left:7px;padding-right:7px}
+}
+
 @media print{
   /* a till roll, not a page: 80mm paper has about 72mm to print on */
   @page{size:72mm auto;margin:3mm}
@@ -146,48 +271,11 @@ button.mini:hover{color:var(--bad);border-color:var(--bad)}
 #slip .sl-tot>span,#slip .sl-tot>b{font-weight:700}
 #slip .sl-sub{font-size:10px;margin:5px 0 2px;font-weight:700;text-transform:uppercase}
 #slip .sl-end{text-align:center;margin-top:8px;font-size:10px;padding-bottom:18px}
-.logs{display:grid;gap:2px}
-.logrow{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:10px;align-items:baseline;
-  font-size:12px;padding:6px 8px;border-radius:7px;background:var(--surface2)}
-.logrow.add{box-shadow:inset 3px 0 0 var(--good)}
-.logrow.del{box-shadow:inset 3px 0 0 var(--bad)}
-.logrow.edit{box-shadow:inset 3px 0 0 var(--warn)}
-.logt{color:var(--muted);font-variant-numeric:tabular-nums;font-size:11px}
-.logs2{min-width:0;overflow-wrap:anywhere}
-.logw{display:inline-block;margin-left:6px;font-size:10px;color:var(--muted);
-  border:1px solid var(--line);border-radius:999px;padding:0 6px}
-@media (max-width:520px){.logrow{grid-template-columns:44px minmax(0,1fr);gap:6px}
-  .logrow>span:last-child{grid-column:1/-1;justify-self:end}}
-.flowg{margin-top:14px}
-.flowg:first-child{margin-top:0}
-.flowh{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
-  font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700;
-  padding-bottom:5px;border-bottom:1px solid var(--line);margin-bottom:7px}
-.flowh .val{font-size:12px;letter-spacing:0;text-transform:none;color:var(--ink);font-variant-numeric:tabular-nums;margin-left:auto}
-.flowh .mini{margin-left:4px;flex:0 0 auto}
-.barbtn{display:grid;grid-template-columns:minmax(90px,1fr) 2.2fr 112px;gap:10px;align-items:center;
-  width:100%;text-align:left;font-family:var(--body);font-size:12px;color:var(--ink);
-  background:none;border:0;border-radius:7px;padding:5px 7px;cursor:pointer}
-.barbtn:hover,.barbtn[aria-expanded="true"]{background:var(--surface2)}
-.barbtn>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.barbtn .val{font-variant-numeric:tabular-nums;color:var(--muted);text-align:right;white-space:nowrap}
-.barbtn .caret{color:var(--muted);font-size:10px}
-.drill{margin:4px 0 10px;padding-left:7px}
-@media (max-width:520px){.barbtn{grid-template-columns:minmax(64px,1fr) 1fr 92px;gap:7px}}
-.gate{position:fixed;inset:0;z-index:200;background:var(--bg);display:grid;place-items:center;padding:24px}
-.gatebox{max-width:460px;width:100%;background:var(--surface);border:1px solid var(--line);
-  border-radius:var(--r);box-shadow:var(--shadow);padding:24px;text-align:center}
-.gatebox h2{font-size:17px;margin-bottom:6px}
-.gatebox .sub{color:var(--muted);font-size:13px;margin:0 0 16px;text-align:left}
-.gatebox .note{margin-top:14px}
-.btn.big2{font-size:15px;padding:11px 18px;width:100%}
-@media (max-width:520px){.topstat{margin-left:0;width:100%;justify-content:space-between;gap:10px}.tile .v{font-size:19px}}
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 
 <header class="top">
   <div class="topbar">
-    <div class="brand"><small>Cash · stock · settlement</small><span id="bizname">Twilight</span></div>
+    <div class="brand"><span id="bizname">Twilight</span></div>
     <div class="topstat">
       <div><div class="k">Cash on hand</div><div class="v" id="hdCash">—</div></div>
       <div><div class="k">In people's hands</div><div class="v" id="hdFloat">—</div></div>
@@ -268,7 +356,7 @@ const NIGHT_NOTE={
 
 const LS='twilight-books-v1';
 
-const APP_VERSION='2026.11.14';
+const APP_VERSION='2026.11.15';
 
 /* ======== src/util/money.js */
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1650,7 +1738,7 @@ function elecCard(){
     <div class="grid tiles" style="margin-bottom:12px">
       ${tile('Billed, all months',money(elecBilled()))}
       ${tile('Paid',money(elecPaid()))}
-      ${tile('STILL OWED',money(elecOwed()),elecOwed()>0?'not yet paid':'settled',elecOwed()>0?'neg':'pos')}
+      ${tile('Still owed',money(elecOwed()),elecOwed()>0?'not yet paid':'settled',elecOwed()>0?'neg':'pos')}
     </div>
     ${tbl(`<th>Month</th><th class="num">Price/amp private</th><th class="num">PRIVATE</th><th class="num">Price/amp elevator</th><th class="num">ELEVATOR</th><th class="num">Meter now</th><th class="num">Meter last</th><th class="num">Units</th><th class="num">PUBLIC</th><th class="num">Total</th><th></th>`,
       rows.map(x=>`<tr>
@@ -2122,11 +2210,11 @@ VIEWS.settlement=function(){
   const result_=`<div class="card"><h2>Result${closedBadge()}</h2>
     ${tbl(`<th>Line</th><th class="num">Amount</th>`,
       line('Sales',r.sales+r.other)+
-      line('Cost of goods',-r.cogs.value)+line('GROSS PROFIT',r.gross,cls(r.gross),true)+
+      line('Cost of goods',-r.cogs.value)+line('Gross profit',r.gross,cls(r.gross),true)+
       line('Daily expenses & bills',-r.daily)+
       (num(r.elec)?line('Electricity used',-num(r.elec)):'')+
       line('Rent & fixed',-r.fixed)+line('Salaries',-r.salaries)+
-      line('NET PROFIT',r.net,cls(r.net),true))}
+      line('Net profit',r.net,cls(r.net),true))}
     <p class="note">Gross ${pct(r.grossPct)} \u00b7 net ${pct(r.netPct)} \u00b7 stock ${money(r.cogs.opening)} + ${money(r.cogs.purchases)} bought \u2212 ${money(r.cogs.closing)} left</p>
   </div>`;
 

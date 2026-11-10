@@ -30,4 +30,4 @@ export const NIGHT_NOTE={
 
 export const LS='twilight-books-v1';
 
-export const APP_VERSION='2026.11.14';
+export const APP_VERSION='2026.11.15';

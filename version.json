@@ -1,6 +1,6 @@
 {
-  "version": "2026.11.14",
-  "notes": "Same app, rebuilt from modular source with a test suite behind it.",
+  "version": "2026.11.15",
+  "notes": "A lighter interface: flat surfaces, hairlines, quiet labels, and the figures made the largest thing on the page.",
   "files": [
     "TwilightBooks.html",
     "TwilightHelper.ps1",

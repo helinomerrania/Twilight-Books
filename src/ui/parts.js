@@ -118,7 +118,7 @@ export function elecCard(){
     <div class="grid tiles" style="margin-bottom:12px">
       ${tile('Billed, all months',money(elecBilled()))}
       ${tile('Paid',money(elecPaid()))}
-      ${tile('STILL OWED',money(elecOwed()),elecOwed()>0?'not yet paid':'settled',elecOwed()>0?'neg':'pos')}
+      ${tile('Still owed',money(elecOwed()),elecOwed()>0?'not yet paid':'settled',elecOwed()>0?'neg':'pos')}
     </div>
     ${tbl(`<th>Month</th><th class="num">Price/amp private</th><th class="num">PRIVATE</th><th class="num">Price/amp elevator</th><th class="num">ELEVATOR</th><th class="num">Meter now</th><th class="num">Meter last</th><th class="num">Units</th><th class="num">PUBLIC</th><th class="num">Total</th><th></th>`,
       rows.map(x=>`<tr>

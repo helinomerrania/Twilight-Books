@@ -54,6 +54,13 @@ that some test can check one thing, and the expected answers are worked out by
 hand in the tests rather than captured from the app, so a test can disagree with
 the code rather than merely describe it. **No real books are in this repository.**
 
+`test/ui.test.mjs` checks the screen without a browser: what the helpers build,
+and what the stylesheet promises. One of those tests walks every class written in
+`src/ui/` and fails if the stylesheet has no rule for it — which is how a rename
+or a deleted block gets caught rather than discovered weeks later on a screen
+nobody looked at. Others hold the design to its own rules: no all-caps labels, no
+shadows, a dark value for every colour, and the till-roll rules left intact.
+
 `test/regressions.test.mjs` is one test per fault these books have actually
 suffered — electricity that was paid but still asked for, a payment that cleared
 the wrong month, a pot driven below zero, a day that landed in yesterday because

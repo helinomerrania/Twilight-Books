@@ -20,11 +20,11 @@ VIEWS.settlement=function(){
   const result_=`<div class="card"><h2>Result${closedBadge()}</h2>
     ${tbl(`<th>Line</th><th class="num">Amount</th>`,
       line('Sales',r.sales+r.other)+
-      line('Cost of goods',-r.cogs.value)+line('GROSS PROFIT',r.gross,cls(r.gross),true)+
+      line('Cost of goods',-r.cogs.value)+line('Gross profit',r.gross,cls(r.gross),true)+
       line('Daily expenses & bills',-r.daily)+
       (num(r.elec)?line('Electricity used',-num(r.elec)):'')+
       line('Rent & fixed',-r.fixed)+line('Salaries',-r.salaries)+
-      line('NET PROFIT',r.net,cls(r.net),true))}
+      line('Net profit',r.net,cls(r.net),true))}
     <p class="note">Gross ${pct(r.grossPct)} \u00b7 net ${pct(r.netPct)} \u00b7 stock ${money(r.cogs.opening)} + ${money(r.cogs.purchases)} bought \u2212 ${money(r.cogs.closing)} left</p>
   </div>`;
 
