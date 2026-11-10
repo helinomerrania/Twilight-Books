@@ -69,6 +69,17 @@ that is true of all of them. The snapshot is what makes the trust recoverable.
 To turn updating off, set `$CheckForUpdates = $false` near the top of
 `TwilightHelper.ps1`.
 
+## Working on it
+
+```
+npm test            # 43 tests, no dependencies
+npm run build       # rebuilds TwilightBooks.html from src/
+```
+
+`TwilightBooks.html` is **generated**. Edit `src/` and build — see
+[ARCHITECTURE.md](ARCHITECTURE.md) for how the source is laid out and why the
+deliverable is still one file.
+
 ## Your data is not here
 
 This repository holds the program only. There are no books in it, and

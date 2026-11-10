@@ -1,6 +1,6 @@
 {
-  "version": "2026.11.13",
-  "notes": "Fixes a Settle up clash where the Pay button could read another row amount.",
+  "version": "2026.11.14",
+  "notes": "Same app, rebuilt from modular source with a test suite behind it.",
   "files": [
     "TwilightBooks.html",
     "TwilightHelper.ps1",

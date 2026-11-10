@@ -1,0 +1,24 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      # No dependencies on purpose: the app ships as one file with none, and the
+      # tests use only what Node brings with it.
+      - name: Run the tests
+        run: node --test 'test/*.test.mjs'
+      - name: Check the built app is in step with src/
+        run: |
+          node build/build.mjs
+          git diff --exit-code -- TwilightBooks.html \
+            || (echo "TwilightBooks.html is out of date - run: node build/build.mjs" && exit 1)

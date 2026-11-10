@@ -228,24 +228,35 @@ button.mini:hover{color:var(--bad);border-color:var(--bad)}
 <script>
 (function(){
 "use strict";
+
+/* ======== src/prelude.js */
 /* opened through the helper: say what we are, so the window gets a name and an icon */
 if(location.protocol==='http:'||location.protocol==='https:'){
   try{const l=document.createElement('link');l.rel='manifest';l.href='manifest.json';
       document.head.appendChild(l);}catch(e){}}
+
+/* ======== src/state.js */
 /* No books are shipped with the app. A fresh copy starts empty and the first run asks for your details; an existing copy reads the folder and this browser. */
 const SEED={v:1,setup:null,cb:[],pu:[],rc:[],inv:{},ledger:[],closed:{},debt:{asAt:null,brought:{}},elec:null,log:[]};
+
 /* ============================================================ state */
 const S={setup:null,cb:[],pu:[],rc:[],inv:{},ledger:[],closed:{},debt:{asAt:null,brought:{}},elec:null,log:[],
          ui:{tab:'tonight',start:null,end:null,d:{},drill:null,logAll:false},db:null};
+
 const TABS=[['tonight','Tonight'],['dashboard','Dashboard'],['cashbook','Cashbook'],
             ['cash','Cash & counts'],['stock','Stock & suppliers'],['settlement','Settlement'],['setup','Setup']];
+
 const IN_TYPES=['Daily Sales','Other Income','Owner Repayment','Owner Capital In'];
+
 const XFER='Cash Transfer';
+
 const EPAY='Electricity Payment';
+
 /* the money-out types that actually happen at closing time, commonest first */
 const NIGHT_TYPES=[['Daily Expense','Expense'],['Staff Advance','Staff advance'],
   ['Owner Advance','Owner advance'],['Salary Payment','Salary'],['Supplier Payment','Supplier'],
   ['Fixed Expense Payment','Rent / fixed'],['Monthly Bill','Bill']];
+
 const NIGHT_NOTE={
   'Daily Expense':'A cost of running today. It comes straight off this month\u2019s profit.',
   'Staff Advance':'Money a staff member keeps. It comes off their salary at month end, so it never touches profit.',
@@ -255,48 +266,80 @@ const NIGHT_NOTE={
   'Fixed Expense Payment':'Paying rent or another fixed cost. It is already charged to every month, so this is only cash leaving.',
   'Monthly Bill':'Internet and the like. It comes off this month\u2019s profit when you enter it.'};
 
+const LS='twilight-books-v1';
 
-/* ============================================================ helpers */
-const $=s=>document.querySelector(s);
+const APP_VERSION='2026.11.14';
+
+/* ======== src/util/money.js */
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
 const num=v=>{const n=typeof v==='number'?v:parseFloat(String(v==null?'':v).replace(/,/g,''));return isFinite(n)?n:0;};
+
 function money(n){const v=Math.round(num(n));return (v<0?'-':'')+Math.abs(v).toLocaleString('en-US');}
+
 function cls(n){return num(n)<0?'neg':'';}
+
 function noteSize(){return num(S.setup&&S.setup.business&&S.setup.business.rounding)||250;}
+
 /* away from zero on a half, so -375 and 375 move the same distance */
 function mround(x){const m=noteSize()||1,q=x/m;
   return (q<0?-Math.round(-q):Math.round(q))*m;}
+
 function qty(v){return (Math.round(num(v)*1000)/1000).toLocaleString('en-US',{maximumFractionDigits:3});}
+
 function pct(x){return (num(x)*100).toFixed(1)+'%';}
+
+/* ======== src/util/obj.js */
+function deep(x){return JSON.parse(JSON.stringify(x));}
+
+/* ======== src/util/dates.js */
 /* The lounge closes after midnight, so the day must be the local one.
    toISOString() is Greenwich, which is three hours behind and lands the
    night's takings on yesterday - and on the 1st, in last month. */
 function localDay(d){d=d||new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+
 function today(){return localDay();}
+
 function ymd(d){return String(d||'').slice(0,10);}
+
 function monthOf(d){return String(d||'').slice(0,7);}
+
 function endOfMonth(ym){const[y,m]=String(ym).split('-').map(Number);return new Date(Date.UTC(y,m,0)).toISOString().slice(0,10);}
+
 function monthName(ym){const[y,m]=String(ym).split('-');
   return new Date(Date.UTC(+y,+m-1,1)).toLocaleDateString('en-US',{month:'long',year:'numeric',timeZone:'UTC'});}
+
 function monthShort(ym){const[y,m]=String(ym).split('-');
   return new Date(Date.UTC(+y,+m-1,1)).toLocaleDateString('en-US',{month:'short',timeZone:'UTC'});}
+
 function nextMonth(ym){const[y,m]=String(ym).split('-').map(Number);
   return new Date(Date.UTC(y,m,1)).toISOString().slice(0,7);}
+
 function shiftMonth(ym,n){const[y,m]=String(ym).split('-').map(Number);
   return new Date(Date.UTC(y,m-1+n,1)).toISOString().slice(0,7);}
+
 function daysBetween(a,b){return Math.round((Date.parse(b)-Date.parse(a))/86400000);}
+
 const inPer=d=>{const x=ymd(d);return x>=S.ui.start&&x<=S.ui.end;};
+
 function byDate(a){return a.slice().sort((x,y)=>ymd(x.d)<ymd(y.d)?-1:ymd(x.d)>ymd(y.d)?1:0);}
+
 function rid(){return 'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
+/* ======== src/core/pots.js */
 /* ============================================================ pots */
 function pots(){const p=(S.setup&&S.setup.pots)||[];
   return p.length?p:[{name:'Box',kind:'own'}];}
+
 function ownPots(){return pots().filter(p=>p.kind!=='float');}
+
 function floatPots(){return pots().filter(p=>p.kind==='float');}
+
 function defaultPot(){const o=ownPots();return o.length?o[0].name:'Box';}
+
 function potOf(e){return e.p||defaultPot();}
+
 /* balance of one pot up to and including a date (blank = everything) */
 function potBalance(name,upto){let t=0;
   for(const e of S.cb){
@@ -307,472 +350,21 @@ function potBalance(name,upto){let t=0;
     t+=num(e.in)-num(e.out);
   }
   return t;}
+
 function cashOnHand(upto){return ownPots().reduce((a,p)=>a+potBalance(p.name,upto),0);}
+
 function inHands(upto){return floatPots().reduce((a,p)=>a+potBalance(p.name,upto),0);}
 
-/* ============================================================ store
-   This copy keeps the books in THIS browser, on THIS computer. Nothing is sent
-   anywhere. A backup folder can be chosen once; after that every change is also
-   written there, so a synced folder (OneDrive, Google Drive) carries it off the
-   machine without anyone remembering to do it. */
-const LS='twilight-books-v1';
-const APP_VERSION='2026.11.13';
-let storeOK=true;
-function readLocal(){try{const r=localStorage.getItem(LS);return r?JSON.parse(r):null;}catch(e){storeOK=false;return null;}}
-function snapshotAll(){return {v:1,savedAt:new Date().toISOString(),
-  setup:S.setup,cb:S.cb,pu:S.pu,rc:S.rc,inv:S.inv,ledger:S.ledger,closed:S.closed,debt:S.debt,elec:S.elec,log:S.log};}
-function applyAll(d){
-  S.setup=d.setup||null;S.cb=d.cb||[];S.pu=d.pu||[];S.rc=d.rc||[];
-  S.inv=d.inv||{};S.ledger=d.ledger||[];S.closed=d.closed||{};
-  S.debt=d.debt||{asAt:null,brought:{}};S.elec=d.elec||null;S.log=d.log||[];}
-/* ---- what changed, and when
-   Nothing reports its own changes; the books are simply compared with how they
-   were a moment ago. That way every route in — typing, a Pay button, a device at
-   home — is caught the same way, and nothing can quietly slip past. */
-let LAST=null;
-function loggable(){return {cb:S.cb,pu:S.pu,rc:S.rc,inv:S.inv,setup:S.setup,closed:S.closed,
-  elec:S.elec,debt:S.debt,ledger:S.ledger};}
-function deep(x){return JSON.parse(JSON.stringify(x));}
-function rowDesc(w,r){
-  if(w==='cb')return r.t+' \u00b7 '+(r.x||'')+' \u00b7 '+(num(r.in)?money(r.in)+' in':money(r.out)+' out')+' \u00b7 '+ymd(r.d);
-  if(w==='pu')return 'Receipt'+(r.no?' '+r.no:'')+' \u00b7 '+(r.s||'')+' \u00b7 '+money(r.amt)+' \u00b7 '+ymd(r.d);
-  if(w==='rc')return 'Cash count '+ymd(r.d)+' \u00b7 '+money(countedTotal(r));
-  return '';}
-function diffRows(w,a,b,out){
-  const A={},B={};
-  (a||[]).forEach(r=>{A[r.id]=r;});(b||[]).forEach(r=>{B[r.id]=r;});
-  Object.keys(B).forEach(id=>{
-    if(!A[id])out.push({k:'add',w,s:rowDesc(w,B[id]),row:deep(B[id])});
-    else if(JSON.stringify(A[id])!==JSON.stringify(B[id]))
-      out.push({k:'edit',w,s:rowDesc(w,A[id])+'  \u2192  '+rowDesc(w,B[id]),row:deep(B[id]),old:deep(A[id])});});
-  Object.keys(A).forEach(id=>{if(!B[id])out.push({k:'del',w,s:rowDesc(w,A[id]),row:deep(A[id])});});}
-function diffSetup(a,b,out){
-  if(!a||!b)return;
-  [['staff','Salary','salary',1],['fixedExpenses','Fixed expense','amount',1],
-   ['partners','Share','share',2],['pots','Cash pot',null,0]].forEach(function(spec){
-    const k=spec[0],label=spec[1],f=spec[2],kind=spec[3],A={},B={};
-    ((a[k])||[]).forEach(x=>{A[x.name]=x;});((b[k])||[]).forEach(x=>{B[x.name]=x;});
-    Object.keys(B).forEach(n=>{
-      if(!A[n])out.push({k:'edit',w:'setup',s:label+' added \u00b7 '+n});
-      else if(f&&num(A[n][f])!==num(B[n][f]))
-        out.push({k:'edit',w:'setup',s:label+' \u00b7 '+n+' \u00b7 '+
-          (kind===2?pct(A[n][f]):money(A[n][f]))+' \u2192 '+(kind===2?pct(B[n][f]):money(B[n][f]))});});
-    Object.keys(A).forEach(n=>{if(!B[n])out.push({k:'edit',w:'setup',s:label+' removed \u00b7 '+n});});});
-  const A={},B={};
-  ((a.stockItems)||[]).forEach(x=>{A[x.name]=x;});((b.stockItems)||[]).forEach(x=>{B[x.name]=x;});
-  Object.keys(B).forEach(n=>{if(A[n]&&num(A[n].price)!==num(B[n].price))
-    out.push({k:'edit',w:'setup',s:'Price \u00b7 '+n+' \u00b7 '+money(A[n].price)+' \u2192 '+money(B[n].price)});
-    if(!A[n])out.push({k:'edit',w:'setup',s:'Stock item added \u00b7 '+n});});
-  Object.keys(A).forEach(n=>{if(!B[n])out.push({k:'edit',w:'setup',s:'Stock item removed \u00b7 '+n});});
-  if(JSON.stringify(a.suppliers||[])!==JSON.stringify(b.suppliers||[]))
-    out.push({k:'edit',w:'setup',s:'Supplier list changed'});
-  const an=(a.business||{}).name,bn=(b.business||{}).name;
-  if(an!==bn)out.push({k:'edit',w:'setup',s:'Business name \u00b7 '+an+' \u2192 '+bn});
-  const ar=num((a.business||{}).rounding),br=num((b.business||{}).rounding);
-  if(ar!==br)out.push({k:'edit',w:'setup',s:'Smallest banknote \u00b7 '+money(ar)+' \u2192 '+money(br)});
-  const ap={},bp={};
-  ((a.pots)||[]).forEach(x=>{ap[x.name]=x.kind||'own';});((b.pots)||[]).forEach(x=>{bp[x.name]=x.kind||'own';});
-  Object.keys(bp).forEach(n=>{if(ap[n]&&ap[n]!==bp[n])
-    out.push({k:'edit',w:'setup',s:'Cash pot \u00b7 '+n+' \u00b7 '+ap[n]+' \u2192 '+bp[n]});});
-  if(JSON.stringify(a.conversions||{})!==JSON.stringify(b.conversions||{}))
-    out.push({k:'edit',w:'setup',s:'Unit conversions changed'});
-  if(JSON.stringify(a.tare||[])!==JSON.stringify(b.tare||[]))
-    out.push({k:'edit',w:'setup',s:'Bucket weights changed'});
-  if(JSON.stringify(a.categories||[])!==JSON.stringify(b.categories||[]))
-    out.push({k:'edit',w:'setup',s:'Stock categories changed'});}
-function diffInv(a,b,out){
-  a=a||{};b=b||{};
-  Object.keys(b).forEach(d=>{
-    if(!a[d])out.push({k:'add',w:'inv',s:'Stock count opened \u00b7 '+d});
-    else if(JSON.stringify(a[d])!==JSON.stringify(b[d]))
-      out.push({k:'edit',w:'inv',s:'Stock count changed \u00b7 '+d+' \u00b7 '+money(booked(d))});});
-  Object.keys(a).forEach(d=>{if(!b[d])out.push({k:'del',w:'inv',s:'Stock count deleted \u00b7 '+d});});}
-function diffSmall(a,b,out){
-  a=a||{};b=b||{};
-  Object.keys(b).forEach(m=>{if(!a[m])out.push({k:'add',w:'closed',s:'Month closed \u00b7 '+monthName(m)});});
-  Object.keys(a).forEach(m=>{if(!b[m])out.push({k:'del',w:'closed',s:'Month reopened \u00b7 '+monthName(m)});});}
-function diffElec(a,b,out){
-  const A=((a&&a.rows)||[]),B=((b&&b.rows)||[]),am={},bm={};
-  A.forEach(r=>{am[r.m]=r;});B.forEach(r=>{bm[r.m]=r;});
-  Object.keys(bm).forEach(m=>{if(JSON.stringify(am[m]||{})!==JSON.stringify(bm[m]))
-    out.push({k:'edit',w:'elec',s:'Electricity \u00b7 '+monthName(m)+' \u00b7 '+money(elecCharged(m))});});
-  if(JSON.stringify((a&&a.factors)||{})!==JSON.stringify((b&&b.factors)||{}))
-    out.push({k:'edit',w:'elec',s:'Electricity rates changed'});}
-function noteChanges(){
-  const now=loggable();
-  if(!LAST){LAST=deep(now);return;}
-  const out=[];
-  diffRows('cb',LAST.cb,now.cb,out);
-  diffRows('pu',LAST.pu,now.pu,out);
-  diffRows('rc',LAST.rc,now.rc,out);
-  diffSetup(LAST.setup,now.setup,out);
-  diffInv(LAST.inv,now.inv,out);
-  diffSmall(LAST.closed,now.closed,out);
-  diffElec(LAST.elec,now.elec,out);
-  if(JSON.stringify(LAST.debt||{})!==JSON.stringify(now.debt||{}))
-    out.push({k:'edit',w:'debt',s:'Supplier debt brought forward changed \u00b7 as at '+((now.debt||{}).asAt||'\u2014')});
-  if(JSON.stringify(LAST.ledger||[])!==JSON.stringify(now.ledger||[]))
-    out.push({k:'edit',w:'ledger',s:'Partner ledger changed'});
-  LAST=deep(now);
-  if(!out.length)return;
-  const at=new Date().toISOString(),who=BK.who||'';
-  if(out.length>25)S.log.push({id:rid(),t:at,who,k:'note',w:'all',
-    s:out.length+' things changed at once \u2014 a backup was loaded, most likely'});
-  else out.forEach(e=>{e.id=rid();e.t=at;e.who=who;S.log.push(e);
-    /* kept so that, if another device saved first, these can be put back on top
-       of its copy instead of one of the two evenings being lost */
-    if(e.k==='add'&&e.row&&(e.w==='cb'||e.w==='pu'||e.w==='rc'))BK.added.push({w:e.w,row:deep(e.row)});});
-  if(S.log.length>200)S.log=S.log.slice(-200);}
-
-function writeLocal(quiet){
-  if(quiet)LAST=deep(loggable()); else noteChanges();
-  let ok=true;
-  if(storeOK){try{localStorage.setItem(LS,JSON.stringify(snapshotAll()));}
-    catch(e){storeOK=false;ok=false;
-      note('This browser will not store the books (private window, or storage full). Save a backup file from the Setup tab before closing this page.');}}
-  else ok=false;
-  if(!quiet)bkSoon();
-  return Promise.resolve(ok);}
-async function connect(){
-  const saved=readLocal();
-  BK.freshStart=!saved;
-  /* Work out where the backups live before a single byte is written. A browser that
-     has never seen these books would otherwise start from the built-in sample and
-     write that straight over a real backup. */
-  await bkDetect();
-  let start=saved,tookFolder=false,unreadable=false,heldBack=false;
-  if(BK.mode==='helper'){
-    /* One set of books for every device: they live in the folder, not in a browser.
-       Which copy is newer is settled by the folder's own clock - the seq the helper
-       reports - because two devices' clocks disagree and the faster one would win
-       every time. If the folder has not moved since we last wrote it, what is here
-       may include work done while the helper was closed, so it stays. */
-    const got=await bkFetchBooks();
-    if(!got.ok)unreadable=true;
-    else if(got.data){
-      let ours=false,unsent=false;
-      try{ours=(localStorage.getItem('tw-lastSeq')||'')===String(BK.seq||'');
-          unsent=localStorage.getItem('tw-unsent')==='1';}catch(e){}
-      /* Work that never reached the folder always wins: it exists nowhere else.
-         Otherwise the folder is taken whenever it has moved since this device
-         last wrote it, because then another device has been at it. */
-      if(!saved)              {start=got.data;tookFolder=true;BK.freshStart=false;}
-      else if(unsent)         {heldBack=true;}
-      else if(!ours||stampOf(got.data)>stampOf(saved))
-                              {start=got.data;tookFolder=true;BK.freshStart=false;}
-    }
-  }
-  applyAll(start||SEED);
-  BK.stamp=stampOf(start);
-  noteChanges();
-  if(tookFolder)writeLocal(true);
-  else if(!saved&&storeOK)writeLocal();
-  S.db=true;
-  try{if(navigator.storage&&navigator.storage.persist)await navigator.storage.persist();}catch(e){}
-  if(BK.state==='ready'&&!tookFolder&&!unreadable)bkWrite(false);
-  /* said after the catching-up save, or the save's own "all clear" would wipe it */
-  if(heldBack)setTimeout(()=>flash('This device had entries that never reached the folder. '
-    +'They were kept and have now been written up.'),3500);
-  if(unreadable)note('The books in the folder could not be read just now, so nothing has been '
-    +'written over them. What is on this screen is this device\u2019s own copy. '
-    +'Reopen Start Twilight, then reload this page.');
-  bkWatch();
-  if(!storeOK)note('This browser will not store anything. Work here is lost when the page closes — save a backup file from the Setup tab.');
-  else if(BK.state==='needs')showGate();
-}
-function stampOf(d){const t=Date.parse((d&&d.savedAt)||'');return isFinite(t)?t:0;}
-/* Another device saved? Take its copy, unless ours is newer or something is being typed. */
-/* ---- updating
-   The helper does the downloading, because only it can write to the folder.
-   The books are never part of an update: the helper keeps its own list of the
-   files it will replace and no books file is on it, so there is nothing an
-   update can do to what you have entered. */
-async function checkUpdate(el){
-  const msg=document.getElementById('updmsg');
-  const say=t=>{if(msg)msg.textContent=t;};
-  if(el)el.disabled=true;
-  say('Looking\u2026');
-  try{
-    const r=await fetch('update',{cache:'no-store'});
-    const j=await r.json();
-    if(j.status==='updated'){
-      const kept=j.books?' Your books were copied to '+j.books+' first.':'';
-      if(BK.dirty||BK.pending)
-        say('Updated to '+j.version+'.'+kept+' Close and reopen Twilight to start using it.');
-      else{say('Updated to '+j.version+'.'+kept+' Reloading\u2026');
-        setTimeout(function(){location.reload();},1800);}
-    }
-    else if(j.status==='current')say('This is already the newest ('+j.version+').');
-    else if(j.status==='offline')say('Could not reach GitHub just now. Nothing was changed.');
-    else if(j.status==='off')say('Update checking is switched off in TwilightHelper.ps1.');
-    else say('Could not update: '+(j.error||'something went wrong')+'. Nothing was changed.');
-  }catch(e){say('The Twilight window did not answer.');}
-  if(el)el.disabled=false;
-}
-
-function bkWatch(){
-  if(BK.mode!=='helper'||bkWatch.on)return;
-  bkWatch.on=setInterval(async function(){
-    /* something typed here is still on its way to the folder: leave it alone */
-    if(BK.state!=='ready'||BK.pending||BK.dirty)return;
-    let j=null;
-    try{const r=await fetch('state',{cache:'no-store'});if(!r.ok)return;j=await r.json();}catch(e){return;}
-    if(!j||!j.seq||j.seq===BK.seq)return;
-    const got=await bkFetchBooks();
-    if(!got.ok||!got.data)return;            /* could not be read: try again next tick */
-    const d=got.data;
-    if(stampOf(d)<=BK.stamp){BK.seq=j.seq;return;}
-    const a=document.activeElement;
-    if(a&&(a.tagName==='INPUT'||a.tagName==='SELECT'))return;   /* mid-entry: come back next tick */
-    BK.seq=j.seq;BK.stamp=stampOf(d);
-    applyAll(d);writeLocal(true);render();
-    flash('Brought up to date \u2014 these books were changed on another device.');
-  },5000);}
-/* the books already sitting in the backup folder, if there are any */
-async function bkFetchBooks(){
-  /* {ok:true,data} - read it.  {ok:true,data:null} - the folder has none yet.
-     {ok:false} - could not be read, which is NOT the same thing: nothing may be
-     written over books we have failed to look at. */
-  try{
-    if(BK.mode==='helper'){const r=await fetch('books',{cache:'no-store'});
-      if(r.status===404)return {ok:true,data:null};
-      if(!r.ok)return {ok:false};
-      const d=await r.json();return {ok:true,data:(d&&d.setup)?d:null};}
-    if(BK.dir){const fh=await BK.dir.getFileHandle('twilight-books.json');
-      const d=JSON.parse(await (await fh.getFile()).text());return {ok:true,data:(d&&d.setup)?d:null};}
-  }catch(e){
-    if(e&&(e.name==='NotFoundError'))return {ok:true,data:null};
-    return {ok:false};}
-  return {ok:true,data:null};}
-/* the moment a folder becomes reachable: never write the sample over real books */
-async function bkAdopt(){
-  if(!BK.freshStart)return false;
-  BK.freshStart=false;
-  const got=await bkFetchBooks();
-  if(!got.ok||!got.data)return false;
-  const d=got.data;
-  applyAll(d);writeLocal();render();
-  flash('Picked up the books already in '+BK.name+'.');
-  return true;}
-
-/* Windows re-asks for the folder every time this page opens, so ask straight away
-   rather than leaving a note on a tab nobody visits. Nothing can be typed until
-   it is answered one way or the other. */
-function showGate(){
-  const g=document.getElementById('gate');if(!g)return;
-  const f=document.getElementById('gateFolder');if(f)f.textContent=BK.name||'backup';
-  g.hidden=false;document.body.style.overflow='hidden';}
-function hideGate(){
-  const g=document.getElementById('gate');if(g)g.hidden=true;
-  document.body.style.overflow='';}
-function gateSay(msg,why){
-  const m=document.getElementById('gateMsg');if(m)m.innerHTML=msg;
-  const w=document.getElementById('gateWhy');if(w&&why!=null)w.textContent=why;}
-async function gateAllow(){
-  if(!BK.dir)return gateOther();
-  gateSay('Waiting for Chrome\u2026');
-  let p=null;
-  try{p=await BK.dir.requestPermission({mode:'readwrite'});}
-  catch(e){
-    gateSay('That folder could not be reached \u2014 it may have been moved, renamed or deleted.',
-            'Choose the folder again, or open without backing up and set it later on the Setup tab.');
-    return;}
-  if(p!=='granted'){
-    gateSay('Chrome did not give permission, so nothing can be written to <strong>'+esc(BK.name)+'</strong>.',
-            'Press the button again and choose Allow, or open without backing up.');
-    return;}
-  BK.state='ready';
-  await bkAdopt();
-  const ok=await bkWrite(true);
-  hideGate();note('');render();
-  flash(ok?('Backups to '+BK.name+' are running again.')
-          :('Allowed, but nothing could be written to '+BK.name+' yet.'));}
-async function gateOther(){
-  await bkChoose();
-  if(BK.state==='ready'){hideGate();note('');}
-  else gateSay('No folder was chosen.','Pick a folder, or open without backing up and set it later on the Setup tab.');}
-function gateSkip(){
-  hideGate();
-  note('Nothing is being backed up this session. Tonight\u2019s work lives only in this browser until you allow the '
-       +BK.name+' folder on the Setup tab.');}
-/* note() is for things that stay until they are fixed; flash() is for a passing
-   word. A flash must never clear a standing warning about saving. */
-let noteSticky=false;
-function note(t){const el=$('#dbnote');if(!el)return;noteSticky=!!t;el.textContent=t||'';el.hidden=!t;}
-function saveSetup(){return writeLocal();}
-function saveLedger(){return writeLocal();}
-function saveDebt(){return writeLocal();}
-function saveElec(){return writeLocal();}
-function saveCb(){return writeLocal();}
-function saveYr(){return writeLocal();}
-function saveInv(date){const d=S.inv[date];
-  if(d&&hasCounts(date)&&!S.closed[monthOf(date)])d.closing=mround(stockValue(date));
-  return writeLocal();}
-function saveClosed(){return writeLocal();}
-
-/* ---- the backup folder: chosen once, remembered, written to on every change */
-const BK={dir:null,state:'none',last:null,lastDaily:null,name:'',remember:true,mode:'picker',err:false,freshStart:false,who:'',dirty:false,added:[],seq:'',stamp:0,pending:false};
-function idb(){return new Promise((res,rej)=>{const r=indexedDB.open('tw-books',1);
-  r.onupgradeneeded=()=>{r.result.createObjectStore('h');};
-  r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
-function idbGet(k){return idb().then(db=>new Promise((res,rej)=>{
-  const q=db.transaction('h','readonly').objectStore('h').get(k);
-  q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);}));}
-function idbSet(k,v){return idb().then(db=>new Promise((res,rej)=>{
-  const q=db.transaction('h','readwrite').objectStore('h').put(v,k);
-  q.onsuccess=()=>res();q.onerror=()=>rej(q.error);}));}
-async function bkDetect(){
-  /* Served by the helper on this computer? Then it does the writing and the browser
-     is never asked for anything. Opened as a loose file instead, fall back to the
-     folder the browser remembers, which it re-asks about every time. */
-  if(location.protocol==='http:'||location.protocol==='https:'){
-    try{
-      const r=await fetch('ping',{cache:'no-store'});
-      if(r.ok){const j=await r.json();
-        if(j&&j.ok){BK.mode='helper';BK.name=j.folder||'the Twilight folder';BK.state='ready';BK.seq=j.seq||'';
-          BK.who=(!j.you||/^127\./.test(j.you))?'at the lounge':'from '+j.you;
-          try{BK.lastDaily=localStorage.getItem('tw-lastDaily')||null;}catch(e){}
-          return;}}
-    }catch(e){}
-  }
-  if(!window.showDirectoryPicker){BK.state='unsupported';return;}
-  try{
-    const h=await idbGet('dir');
-    if(!h){BK.state='none';return;}
-    BK.dir=h;BK.name=h.name||'backup';
-    const p=await h.queryPermission({mode:'readwrite'});
-    BK.state=(p==='granted')?'ready':'needs';
-    try{BK.lastDaily=localStorage.getItem('tw-lastDaily')||null;}catch(e){}
-  }catch(e){BK.state='none';}}
-async function bkChoose(){
-  let h;
-  try{h=await window.showDirectoryPicker({mode:'readwrite',id:'twilight-backup'});}
-  catch(e){if(e&&e.name!=='AbortError')flash('Could not open that folder: '+(e.message||e.name));return;}
-  BK.dir=h;BK.name=h.name||'backup';BK.state='ready';BK.remember=true;
-  try{await idbSet('dir',h);}catch(e){BK.remember=false;}
-  await bkAdopt();
-  const ok=await bkWrite(true);render();note('');
-  flash(ok?('Every change is now also written to the '+BK.name+' folder.')
-         :('The folder was accepted but nothing could be written to it yet.'));}
-async function bkReconnect(){
-  if(!BK.dir)return bkChoose();
-  try{
-    const p=await BK.dir.requestPermission({mode:'readwrite'});
-    if(p==='granted'){BK.state='ready';await bkWrite(true);render();note('');flash('Backups to '+BK.name+' are running again.');}
-    else flash('Permission was not given, so nothing is being backed up.');
-  }catch(e){flash('Could not reconnect: '+(e.message||e.name));}}
-async function bkStop(){
-  try{await idbSet('dir',null);}catch(e){}
-  BK.dir=null;BK.state='none';BK.name='';render();
-  flash('Automatic backups stopped. The folder and its files are untouched.');}
-let bkT=null;
-function bkSoon(){if(BK.state!=='ready')return;BK.dirty=true;
-  clearTimeout(bkT);bkT=setTimeout(()=>bkWrite(false),2500);}
-async function bkPut(name,txt){
-  const fh=await BK.dir.getFileHandle(name,{create:true});
-  const w=await fh.createWritable();await w.write(txt);await w.close();}
-function bkTick(){const el=document.getElementById('bkStatus');if(el)el.textContent=bkText();}
-async function bkWrite(force){
-  if(BK.state!=='ready')return false;
-  const snap=snapshotAll(),txt=JSON.stringify(snap,null,1),d=today();
-  if(BK.mode==='helper'){
-    BK.pending=true;
-    try{
-      let r=await fetch('save',{method:'POST',
-        headers:{'Content-Type':'application/json','X-Twilight':'1','X-Twilight-Seq':String(BK.seq||'')},
-        body:txt});
-      if(r.status===409){
-        /* Another device saved between our reading the books and writing them.
-           Take its copy and put our own new entries on top, rather than letting
-           one of the two evenings disappear. */
-        const got=await bkFetchBooks();
-        if(got.ok&&got.data){
-          const mine=BK.added.slice();
-          applyAll(got.data);
-          let put=0;
-          mine.forEach(a=>{const arr=a.w==='cb'?S.cb:(a.w==='pu'?S.pu:S.rc);
-            if(!arr.some(x=>x.id===a.row.id)){arr.push(a.row);put++;}});
-          try{const j=await r.json();if(j&&j.seq)BK.seq=j.seq;}catch(e){}
-          const snap2=snapshotAll();
-          r=await fetch('save',{method:'POST',
-            headers:{'Content-Type':'application/json','X-Twilight':'1','X-Twilight-Seq':String(BK.seq||'')},
-            body:JSON.stringify(snap2,null,1)});
-          if(r.ok){BK.stamp=stampOf(snap2);render();
-            if(put)flash('Another device had saved first \u2014 '+put+' of your entries were put back on top of it.');}
-        }
-      }
-      if(!r.ok)throw new Error('the helper refused it');
-      try{const j=await r.json();if(j&&j.seq)BK.seq=j.seq;}catch(e){}
-      BK.last=new Date();BK.lastDaily=d;BK.err=false;BK.pending=false;BK.dirty=false;
-      BK.added=[];
-      if(!BK.stamp||BK.stamp<stampOf(snap))BK.stamp=stampOf(snap);
-      try{localStorage.removeItem('tw-unsent');}catch(e){}
-      try{localStorage.setItem('tw-lastSeq',String(BK.seq||''));}catch(e){}
-      try{localStorage.setItem('tw-lastDaily',d);}catch(e){}
-      note('');bkTick();return true;
-    }catch(e){
-      /* the window was closed, or the computer is busy — keep the books, keep trying */
-      BK.err=true;BK.pending=false;
-      /* survives closing the app: on the way back in, this copy must not be
-         replaced by an older one sitting in the folder */
-      try{localStorage.setItem('tw-unsent','1');}catch(e){}
-      note('The Twilight helper window is not answering, so nothing is being copied to '+BK.name
-           +' right now. The books are safe in this browser. Reopen "Start Twilight" and it picks up again.');
-      bkTick();return false;}
-  }
-  if(!BK.dir)return false;
-  try{
-    await bkPut('twilight-books.json',txt);
-    if(force||BK.lastDaily!==d){
-      await bkPut('twilight-books-'+d+'.json',txt);
-      BK.lastDaily=d;try{localStorage.setItem('tw-lastDaily',d);}catch(e){}}
-    BK.last=new Date();
-    const el=document.getElementById('bkStatus');if(el)el.textContent=bkText();
-    return true;
-  }catch(e){BK.state='needs';
-    note('Could not write the backup to '+BK.name+'. Open Setup and press Reconnect.');
-    render();return false;}}
-function bkText(){
-  if(BK.mode==='helper')
-    return BK.err
-      ? 'Paused \u2014 the helper window is not answering. The books are safe here meanwhile.'
-      : 'Saved into '+BK.name+' by the helper on this computer'
-        +(BK.last?' \u00b7 last saved '+String(BK.last.getHours()).padStart(2,'0')+':'+String(BK.last.getMinutes()).padStart(2,'0'):'')
-        +'. Nothing to allow, nothing to press.';
-  if(BK.state==='unsupported')return 'This browser cannot write to a folder on its own — use the backup button instead.';
-  if(BK.state==='none')return 'No backup folder chosen. Nothing is being copied anywhere.';
-  if(BK.state==='needs')return 'Paused. The browser needs permission for the '+BK.name+' folder again.';
-  return 'Writing to the '+BK.name+' folder'
-    +(BK.last?' · last saved '+String(BK.last.getHours()).padStart(2,'0')+':'+String(BK.last.getMinutes()).padStart(2,'0'):'')
-    +(BK.lastDaily===today()?' · today’s dated copy done':'')
-    +(BK.remember===false?'. This browser cannot remember the folder, so it must be chosen again each time this page opens.':'.');}
-
-/* ---- the manual file, still there for moving between machines */
-function backupNow(){
-  const blob=new Blob([JSON.stringify(snapshotAll(),null,1)],{type:'application/json'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='twilight-books-'+today()+'.json';
-  document.body.appendChild(a);a.click();
-  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);
-  flash('Backup file saved to your downloads.');}
-function restoreFrom(file){
-  const r=new FileReader();
-  r.onload=()=>{try{
-      const d=JSON.parse(r.result);
-      if(!d||!d.setup)throw new Error('that file does not hold the books');
-      applyAll(d);writeLocal();render();
-      flash('Books restored from '+file.name+(d.savedAt?' (saved '+ymd(d.savedAt)+')':'')+'.');
-    }catch(e){flash('Could not read that file: '+e.message);}};
-  r.readAsText(file);}
-
+/* ======== src/core/types.js */
 /* ============================================================ calculations */
 function sumCB(type,field,detail,all){let t=0;
   for(const e of S.cb){if(e.t!==type)continue;if(!all&&!inPer(e.d))continue;
     if(detail!=null&&e.x!==detail)continue;t+=num(e[field]);}
   return t;}
+
 function typeNames(){const t=(S.setup.types||[]).map(x=>x.name);
   [XFER,EPAY].forEach(n=>{if(!t.includes(n))t.push(n);});return t;}
+
 function typeDetails(t){
   const st=S.setup||{};
   if(t===XFER)return [];
@@ -784,16 +376,22 @@ function typeDetails(t){
   if(t==='Fixed Expense Payment')return (st.fixedExpenses||[]).map(f=>f.name);
   const x=(st.types||[]).find(y=>y.name===t);return x?(x.details||[]):[];}
 
+/* ======== src/core/stock.js */
 /* ---- stock */
 function tareOf(name){const t=((S.setup.tare)||[]).find(x=>x.name===name);return t?num(t.g):0;}
+
 function catLetter(c){return String(c||'').trim().charAt(0).toUpperCase();}
+
 function hasCounts(date){const d=S.inv[date];return !!(d&&d.counts&&Object.keys(d.counts).length);}
+
 function countsFor(date){const d=S.inv[date];return (d&&d.counts)||{};}
+
 /* a closed count keeps the prices it was valued at, so re-pricing an item later
    never moves a month that is already shut */
 function priceOf(item,date){const d=S.inv[date];
   if(d&&d.prices&&d.prices[item.name]!=null)return num(d.prices[item.name]);
   return num(item.price);}
+
 function itemQty(item,counts){
   const c=counts[item.name]||{},cv=S.setup.conversions||{},L=catLetter(item.category);
   const gk=num(cv.gramsPerKilo)||1000,gp=num(cv.gramsPerPack)||50,
@@ -803,17 +401,24 @@ function itemQty(item,counts){
     return num(c.cartons)*bc*perBlock+num(c.blocks)*perBlock+num(c.packs)*(gp/gk);}
   if(L==='E')return num(c.cartons)+num(c.buckets)/bk;
   return num(c.pkg)+num(c.pcs)/(num(item.per)||1);}
+
 function itemValue(item,counts,date){return itemQty(item,counts)*priceOf(item,date);}
+
 function blockTotals(date){const counts=countsFor(date),out={};
   for(const it of S.setup.stockItems||[]){const L=catLetter(it.category);
     out[L]=out[L]||{qty:0,value:0};out[L].qty+=itemQty(it,counts);out[L].value+=itemValue(it,counts,date);}
   return out;}
+
 function stockValue(date){const b=blockTotals(date);let t=0;for(const k in b)t+=b[k].value;return t;}
+
 function countDates(){return Object.keys(S.inv).sort();}
+
 /* a count that has no quantities and no booked figure has been opened but not done,
    so it must never be used to value the stock */
 function isCounted(date){const d=S.inv[date];return hasCounts(date)||!!(d&&d.closing!=null);}
+
 function valuedDates(){return countDates().filter(isCounted);}
+
 /* what the count was booked at — the figure that carries into the next month */
 function booked(date){if(!date)return 0;const d=S.inv[date];if(!d)return 0;
   /* Once a month is closed its stock value is a record, not a calculation.
@@ -821,9 +426,13 @@ function booked(date){if(!date)return 0;const d=S.inv[date];if(!d)return 0;
      reach back and move a month that is already settled. */
   if(d.closing!=null&&(S.closed[monthOf(date)]||!hasCounts(date)))return num(d.closing);
   return mround(stockValue(date));}
+
 function countForPeriod(){const d=valuedDates().filter(x=>x<=S.ui.end);return d.length?d[d.length-1]:null;}
+
 function openingDate(){const d=valuedDates().filter(x=>x<S.ui.start);return d.length?d[d.length-1]:null;}
+
 function openingStock(){const d=openingDate();return d?booked(d):0;}
+
 /* When the month holds its own count, what was bought is measured from the
    previous count to that one - otherwise a count taken on the 1st would be set
    against a whole month of receipts. With no count this month, the period stands. */
@@ -835,6 +444,7 @@ function purchasesIn(){
     if(from!=null){if(d>from&&d<=to)t+=num(p.amt);}
     else if(inPer(p.d))t+=num(p.amt);}
   return t;}
+
 function cogs(){const cd=countForPeriod(),closing=cd?booked(cd):0,opening=openingStock(),purch=purchasesIn();
   /* Stock you still have cannot exceed what you started with plus what you bought. When it does,
      nothing was consumed to measure — either this is the first count, setting the opening
@@ -842,73 +452,87 @@ function cogs(){const cd=countForPeriod(),closing=cd?booked(cd):0,opening=openin
   const raw=mround(opening+purch-closing);
   return {opening,purchases:purch,closing,value:Math.max(0,raw),raw,date:cd};}
 
-/* ---- the month's result */
-function live(){
-  const sales=sumCB('Daily Sales','in'),other=sumCB('Other Income','in'),rev=sales+other;
-  const c=cogs(),gross=rev-c.value;
-  /* The meter reading already charges electricity to the month it was used, so a
-     bill typed into the Cashbook as a Monthly Bill must not charge it a second time. */
-  const el=elecDetails();
-  let bills=0;for(const e of S.cb)
-    if(e.t==='Monthly Bill'&&inPer(e.d)&&!el.includes(e.x))bills+=num(e.out);
-  const daily=sumCB('Daily Expense','out')+bills;
-  const elec=elecInPeriod();
-  const fixed=(S.setup.fixedExpenses||[]).reduce((a,f)=>a+num(f.amount),0);
-  const salaries=(S.setup.staff||[]).reduce((a,s)=>a+num(s.salary),0);
-  const opex=daily+elec+fixed+salaries,net=gross-opex;
-  return {sales,other,rev,cogs:c,gross,grossPct:rev?gross/rev:0,
-          daily,elec,fixed,salaries,opex,net,netPct:rev?net/rev:0};}
-function livePayroll(){return (S.setup.staff||[]).map(s=>{
-  /* an advance handed back is recorded on the cash-in side, so it nets off */
-  const adv=sumCB('Staff Advance','out',s.name)-sumCB('Staff Advance','in',s.name),
-        paid=paidForMonth('Salary Payment',s.name);
-  const netPay=num(s.salary)-adv,still=netPay-paid,carryIn=num(s.carryIn);
-  return {name:s.name,gross:num(s.salary),adv,netPay,paid,still,carryIn,
-          payNow:Math.max(0,still-carryIn),carry:Math.max(0,carryIn-still)};});}
-function liveSuppliers(){const asAt=S.debt.asAt||'';const cd=countForPeriod();
-  const counts=cd&&hasCounts(cd)?countsFor(cd):{};
-  return (S.setup.suppliers||[]).map(name=>{
-    const bf=num((S.debt.brought||{})[name]);
-    /* bounded by the month being looked at, or a receipt dated next year would
-       show up in this month's debt and in the figure the settle-up offers to pay */
-    let credit=0;for(const p of S.pu)
-      if(p.s===name&&p.terms!=='Cash'&&ymd(p.d)>asAt&&ymd(p.d)<=S.ui.end)credit+=num(p.amt);
-    let paid=0;for(const e of S.cb){
-      if(e.t!=='Supplier Payment'||e.x!==name)continue;
-      const on=settlesOn(e);
-      if(on>asAt&&on<=S.ui.end)paid+=num(e.out);}
-    let stock=0;for(const it of S.setup.stockItems||[])if(it.supplier===name)stock+=itemValue(it,counts,cd);
-    return {name,owedBefore:bf+credit,paid,still:bf+credit-paid,stock};});}
-function livePartners(){const net=live().net,list=S.setup.partners||[];let given=0;
-  /* The last partner mops up the few dinars rounding leaves behind - but only
-     when the shares really do add to 100%. Otherwise a 20% hole would land on
-     him silently, so each partner simply gets his own share and a check complains. */
-  const whole=Math.abs(list.reduce((a,p)=>a+num(p.share),0)-1)<1e-9;
-  return list.map((p,i)=>{
-    const prior=byDate(S.ledger.filter(l=>l.p===p.name&&ymd(l.d)<S.ui.start));
-    const bf=prior.length?num(prior[prior.length-1].cf):0;
-    /* the last partner takes whatever the rounding left over, so the shares
-       always add up to the net profit exactly */
-    const share=(whole&&i===list.length-1)?(net-given):mround(net*num(p.share));
-    given+=share;
-    const wd=sumCB('Owner Advance','out',p.name)-sumCB('Owner Repayment','in',p.name)-sumCB('Owner Capital In','in',p.name);
-    const bal=bf+share-wd,paid=paidForMonth('Partner Settlement',p.name);
-    return {name:p.name,share:num(p.share),bf,profit:share,wd,bal,paid,cf:bal-paid};});}
-function liveExpenses(){const m={};
-  for(const e of S.cb){if((e.t!=='Daily Expense'&&e.t!=='Monthly Bill')||!inPer(e.d))continue;
-    m[e.x]=(m[e.x]||0)+num(e.out);}
-  const el=elecInPeriod();if(el)m['Electricity (used)']=(m['Electricity (used)']||0)+el;
-  return Object.entries(m).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);}
+/* ======== src/core/electricity.js */
+/* ---- electricity
+   Three separate bills share one meter arrangement:
+     private  = price per ampere x amperes billed
+     elevator = price per ampere x amperes billed, split between the flats
+     public   = units used on the meter x price per unit, split between the flats
+   Each is rounded to the note size on its own, exactly as the workbook did. */
+function elecFactors(){const f=(S.elec&&S.elec.factors)||{};
+  const set=(v,dflt)=>(v==null||v==='')?dflt:num(v);
+  return {privateAmps:set(f.privateAmps,25),elevatorAmps:set(f.elevatorAmps,20),
+          elevatorShare:num(f.elevatorShare)||6,publicRate:set(f.publicRate,185),
+          publicShare:num(f.publicShare)||3};}
 
+function elecDetails(){
+  const mb=(S.setup.types||[]).find(t=>t.name==='Monthly Bill');
+  const d=((mb&&mb.details)||[]).filter(x=>/electric/i.test(x));
+  return d.length?d:['Electricity (Private)','Electricity (Elevator)','Electricity (Public)'];}
+
+function elecStored(){return ((S.elec&&S.elec.rows)||[]).slice().sort((a,b)=>a.m<b.m?-1:1);}
+
+function elecRows(withMonth){
+  const rows=elecStored();
+  if(withMonth&&!rows.some(r=>r.m===withMonth))rows.push({m:withMonth});
+  rows.sort((a,b)=>a.m<b.m?-1:1);
+  return rows;}
+
+function elecCalc(withMonth){
+  const f=elecFactors(),rows=elecRows(withMonth),out=[];let prevNow=null;
+  for(const r of rows){
+    const last=r.last!=null&&r.last!==''?num(r.last):(prevNow!=null?prevNow:null);
+    const now=r.now!=null&&r.now!==''?num(r.now):null;
+    const units=(now!=null&&last!=null)?now-last:null;
+    const priv=r.pp?mround(num(r.pp)*f.privateAmps):null;
+    const elev=r.pe?mround(num(r.pe)*f.elevatorAmps/f.elevatorShare):null;
+    const pub=units!=null?mround(units*f.publicRate/f.publicShare):null;
+    const any=priv!=null||elev!=null||pub!=null;
+    const total=any?num(priv)+num(elev)+num(pub):null;
+    out.push({row:r,last,now,units,priv,elev,pub,total,closed:!!S.closed[r.m]});
+    if(now!=null)prevNow=now;
+  }
+  return out;}
+
+/* the bill belongs to the month the power was used, whether or not it has been paid */
+function elecCharged(month){const x=elecCalc().find(y=>y.row.m===month);return x&&x.total?x.total:0;}
+
+function elecInPeriod(){let t=0,m=monthOf(S.ui.start);
+  while(m<=monthOf(S.ui.end)){t+=elecCharged(m);m=nextMonth(m);}
+  return t;}
+
+function elecBilled(){return elecCalc().reduce((a,x)=>a+num(x.total),0);}
+
+function elecPaid(){const el=elecDetails();let t=0;
+  for(const e of S.cb)if(e.t===EPAY||(e.t==='Monthly Bill'&&el.includes(e.x)))t+=num(e.out);
+  return t;}
+
+/* counted the same way the settle-up counts it, month by month, so the two agree */
+function elecOwed(){return elecCalc().reduce((a,x)=>a+Math.max(0,elecOwedFor(x.row.m)),0);}
+
+/* ---- the settle-up list: every line stays on the list and says what became of it,
+   so a salary swallowed by advances or a partner already paid is visible, not missing */
+/* A payment written by the Pay button carries the month it settles. One typed in
+   by hand as a Monthly Bill, or a row whose Type was changed later, carries no
+   month at all - so it counts against the month it is dated in. Either way the
+   money has left the box, and Still to Pay must stop asking for it. */
+function elecPaidFor(m){const el=elecDetails();let t=0;
+  for(const e of S.cb){
+    if(!(e.t===EPAY||(e.t==='Monthly Bill'&&el.includes(e.x))))continue;
+    if(e.m?e.m!==m:monthOf(e.d)!==m)continue;
+    t+=num(e.out);}
+  return t;}
+
+function elecOwedFor(m){return elecCharged(m)-elecPaidFor(m);}
+
+/* ======== src/core/months.js */
 /* ---- closed months: read the record instead of recomputing it */
 function closedMonths(){return Object.keys(S.closed).sort();}
+
 function frozen(){const m=monthOf(S.ui.start),c=S.closed[m];
   if(c&&c.period&&c.period.start===S.ui.start&&c.period.end===S.ui.end)return c;
   return null;}
-function result(){const f=frozen();return f?f.result:live();}
-function payroll(){const f=frozen();return f?f.payroll:livePayroll();}
-function partners(){const f=frozen();return f?f.partners:livePartners();}
-function suppliers(){const f=frozen();return f?f.suppliers:liveSuppliers();}
+
 function lastClosed(){const m=closedMonths().filter(x=>x<monthOf(S.ui.start));
   return m.length?S.closed[m[m.length-1]]:null;}
 
@@ -925,9 +549,118 @@ function snapshot(){
     pots:pots().map(p=>({name:p.name,kind:p.kind||'own',balance:potBalance(p.name,S.ui.end)})),
     cashOnHand:cashOnHand(S.ui.end),inHands:inHands(S.ui.end),noteSize:noteSize()};}
 
+/* ======== src/core/pnl.js */
+/* ---- the month's result */
+function live(){
+  const sales=sumCB('Daily Sales','in'),other=sumCB('Other Income','in'),rev=sales+other;
+  const c=cogs(),gross=rev-c.value;
+  /* The meter reading already charges electricity to the month it was used, so a
+     bill typed into the Cashbook as a Monthly Bill must not charge it a second time. */
+  const el=elecDetails();
+  let bills=0;for(const e of S.cb)
+    if(e.t==='Monthly Bill'&&inPer(e.d)&&!el.includes(e.x))bills+=num(e.out);
+  const daily=sumCB('Daily Expense','out')+bills;
+  const elec=elecInPeriod();
+  const fixed=(S.setup.fixedExpenses||[]).reduce((a,f)=>a+num(f.amount),0);
+  const salaries=(S.setup.staff||[]).reduce((a,s)=>a+num(s.salary),0);
+  const opex=daily+elec+fixed+salaries,net=gross-opex;
+  return {sales,other,rev,cogs:c,gross,grossPct:rev?gross/rev:0,
+          daily,elec,fixed,salaries,opex,net,netPct:rev?net/rev:0};}
+
+function liveExpenses(){const m={};
+  for(const e of S.cb){if((e.t!=='Daily Expense'&&e.t!=='Monthly Bill')||!inPer(e.d))continue;
+    m[e.x]=(m[e.x]||0)+num(e.out);}
+  const el=elecInPeriod();if(el)m['Electricity (used)']=(m['Electricity (used)']||0)+el;
+  return Object.entries(m).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);}
+
+function result(){const f=frozen();return f?f.result:live();}
+
+/* ======== src/core/people.js */
+function livePayroll(){return (S.setup.staff||[]).map(s=>{
+  /* an advance handed back is recorded on the cash-in side, so it nets off */
+  const adv=sumCB('Staff Advance','out',s.name)-sumCB('Staff Advance','in',s.name),
+        paid=paidForMonth('Salary Payment',s.name);
+  const netPay=num(s.salary)-adv,still=netPay-paid,carryIn=num(s.carryIn);
+  return {name:s.name,gross:num(s.salary),adv,netPay,paid,still,carryIn,
+          payNow:Math.max(0,still-carryIn),carry:Math.max(0,carryIn-still)};});}
+
+function livePartners(){const net=live().net,list=S.setup.partners||[];let given=0;
+  /* The last partner mops up the few dinars rounding leaves behind - but only
+     when the shares really do add to 100%. Otherwise a 20% hole would land on
+     him silently, so each partner simply gets his own share and a check complains. */
+  const whole=Math.abs(list.reduce((a,p)=>a+num(p.share),0)-1)<1e-9;
+  return list.map((p,i)=>{
+    const prior=byDate(S.ledger.filter(l=>l.p===p.name&&ymd(l.d)<S.ui.start));
+    const bf=prior.length?num(prior[prior.length-1].cf):0;
+    /* the last partner takes whatever the rounding left over, so the shares
+       always add up to the net profit exactly */
+    const share=(whole&&i===list.length-1)?(net-given):mround(net*num(p.share));
+    given+=share;
+    const wd=sumCB('Owner Advance','out',p.name)-sumCB('Owner Repayment','in',p.name)-sumCB('Owner Capital In','in',p.name);
+    const bal=bf+share-wd,paid=paidForMonth('Partner Settlement',p.name);
+    return {name:p.name,share:num(p.share),bf,profit:share,wd,bal,paid,cf:bal-paid};});}
+
+function payroll(){const f=frozen();return f?f.payroll:livePayroll();}
+
+function partners(){const f=frozen();return f?f.partners:livePartners();}
+
+function partnerNote(p){
+  return money(p.profit)+' share'
+    +(p.wd?' \u2212 '+money(p.wd)+' already taken':'')
+    +(p.bf>0?' + '+money(p.bf)+' brought forward':'')
+    +(p.bf<0?' \u2212 '+money(-p.bf)+' owed from last month':'');}
+
+/* ======== src/core/suppliers.js */
+function liveSuppliers(){const asAt=S.debt.asAt||'';const cd=countForPeriod();
+  const counts=cd&&hasCounts(cd)?countsFor(cd):{};
+  return (S.setup.suppliers||[]).map(name=>{
+    const bf=num((S.debt.brought||{})[name]);
+    /* bounded by the month being looked at, or a receipt dated next year would
+       show up in this month's debt and in the figure the settle-up offers to pay */
+    let credit=0;for(const p of S.pu)
+      if(p.s===name&&p.terms!=='Cash'&&ymd(p.d)>asAt&&ymd(p.d)<=S.ui.end)credit+=num(p.amt);
+    let paid=0;for(const e of S.cb){
+      if(e.t!=='Supplier Payment'||e.x!==name)continue;
+      const on=settlesOn(e);
+      if(on>asAt&&on<=S.ui.end)paid+=num(e.out);}
+    let stock=0;for(const it of S.setup.stockItems||[])if(it.supplier===name)stock+=itemValue(it,counts,cd);
+    return {name,owedBefore:bf+credit,paid,still:bf+credit-paid,stock};});}
+
+function suppliers(){const f=frozen();return f?f.suppliers:liveSuppliers();}
+
+/* ---- a supplier's account for the month: what was carried in, what came,
+   what was paid, what is left. Only credit receipts make debt; cash ones never did. */
+function supStatement(name){
+  const asAt=S.debt.asAt||'';
+  let opening=num((S.debt.brought||{})[name]);
+  const lines=[];let bought=0,paid=0;
+  for(const p of S.pu){
+    if(p.s!==name||p.terms==='Cash')continue;
+    const d=ymd(p.d);if(d<=asAt)continue;
+    if(d<S.ui.start)opening+=num(p.amt);
+    else if(d<=S.ui.end){bought+=num(p.amt);
+      lines.push({d,what:'Receipt'+(p.no?' '+p.no:'')+(p.w&&p.w!=='Several items'?' \u00b7 '+p.w:''),amt:num(p.amt)});}
+  }
+  for(const e of S.cb){
+    if(e.t!=='Supplier Payment'||e.x!==name)continue;
+    const d=ymd(e.d);if(d<=asAt)continue;
+    if(d<S.ui.start)opening-=num(e.out);
+    else if(d<=S.ui.end){paid+=num(e.out);
+      lines.push({d,what:'Paid \u00b7 '+potOf(e),amt:-num(e.out)});}
+  }
+  lines.sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0);
+  let stock=0;const cd=countForPeriod(),counts=cd&&hasCounts(cd)?countsFor(cd):{};
+  for(const it of S.setup.stockItems||[])if(it.supplier===name)stock+=itemValue(it,counts,cd);
+  return {name,opening,lines,bought,paid,closing:opening+bought-paid,stock:stock};}
+
+function supAll(){return (S.setup.suppliers||[]).map(supStatement)
+  .filter(x=>x.opening||x.lines.length||x.closing||x.stock);}
+
+/* ======== src/core/counts.js */
 /* ---- cash counts */
 function countedTotal(r){if(r.counts)return Object.values(r.counts).reduce((a,v)=>a+num(v),0);
   return num(r.counted);}
+
 function countRows(){return byDate(S.rc)
   .filter(r=>r.counts?Object.keys(r.counts).length>0:r.counted!=null)
   .map(r=>{
@@ -944,68 +677,7 @@ function countRows(){return byDate(S.rc)
     : expOwn;
   return {r,split,perPot,counted,expected:base,diff:counted-base};});}
 
-/* ---- electricity
-   Three separate bills share one meter arrangement:
-     private  = price per ampere x amperes billed
-     elevator = price per ampere x amperes billed, split between the flats
-     public   = units used on the meter x price per unit, split between the flats
-   Each is rounded to the note size on its own, exactly as the workbook did. */
-function elecFactors(){const f=(S.elec&&S.elec.factors)||{};
-  const set=(v,dflt)=>(v==null||v==='')?dflt:num(v);
-  return {privateAmps:set(f.privateAmps,25),elevatorAmps:set(f.elevatorAmps,20),
-          elevatorShare:num(f.elevatorShare)||6,publicRate:set(f.publicRate,185),
-          publicShare:num(f.publicShare)||3};}
-function elecDetails(){
-  const mb=(S.setup.types||[]).find(t=>t.name==='Monthly Bill');
-  const d=((mb&&mb.details)||[]).filter(x=>/electric/i.test(x));
-  return d.length?d:['Electricity (Private)','Electricity (Elevator)','Electricity (Public)'];}
-function elecStored(){return ((S.elec&&S.elec.rows)||[]).slice().sort((a,b)=>a.m<b.m?-1:1);}
-function elecRows(withMonth){
-  const rows=elecStored();
-  if(withMonth&&!rows.some(r=>r.m===withMonth))rows.push({m:withMonth});
-  rows.sort((a,b)=>a.m<b.m?-1:1);
-  return rows;}
-function elecCalc(withMonth){
-  const f=elecFactors(),rows=elecRows(withMonth),out=[];let prevNow=null;
-  for(const r of rows){
-    const last=r.last!=null&&r.last!==''?num(r.last):(prevNow!=null?prevNow:null);
-    const now=r.now!=null&&r.now!==''?num(r.now):null;
-    const units=(now!=null&&last!=null)?now-last:null;
-    const priv=r.pp?mround(num(r.pp)*f.privateAmps):null;
-    const elev=r.pe?mround(num(r.pe)*f.elevatorAmps/f.elevatorShare):null;
-    const pub=units!=null?mround(units*f.publicRate/f.publicShare):null;
-    const any=priv!=null||elev!=null||pub!=null;
-    const total=any?num(priv)+num(elev)+num(pub):null;
-    out.push({row:r,last,now,units,priv,elev,pub,total,closed:!!S.closed[r.m]});
-    if(now!=null)prevNow=now;
-  }
-  return out;}
-/* the bill belongs to the month the power was used, whether or not it has been paid */
-function elecCharged(month){const x=elecCalc().find(y=>y.row.m===month);return x&&x.total?x.total:0;}
-function elecInPeriod(){let t=0,m=monthOf(S.ui.start);
-  while(m<=monthOf(S.ui.end)){t+=elecCharged(m);m=nextMonth(m);}
-  return t;}
-function elecBilled(){return elecCalc().reduce((a,x)=>a+num(x.total),0);}
-function elecPaid(){const el=elecDetails();let t=0;
-  for(const e of S.cb)if(e.t===EPAY||(e.t==='Monthly Bill'&&el.includes(e.x)))t+=num(e.out);
-  return t;}
-/* counted the same way the settle-up counts it, month by month, so the two agree */
-function elecOwed(){return elecCalc().reduce((a,x)=>a+Math.max(0,elecOwedFor(x.row.m)),0);}
-
-/* ---- the settle-up list: every line stays on the list and says what became of it,
-   so a salary swallowed by advances or a partner already paid is visible, not missing */
-/* A payment written by the Pay button carries the month it settles. One typed in
-   by hand as a Monthly Bill, or a row whose Type was changed later, carries no
-   month at all - so it counts against the month it is dated in. Either way the
-   money has left the box, and Still to Pay must stop asking for it. */
-function elecPaidFor(m){const el=elecDetails();let t=0;
-  for(const e of S.cb){
-    if(!(e.t===EPAY||(e.t==='Monthly Bill'&&el.includes(e.x))))continue;
-    if(e.m?e.m!==m:monthOf(e.d)!==m)continue;
-    t+=num(e.out);}
-  return t;}
-function elecOwedFor(m){return elecCharged(m)-elecPaidFor(m);}
-
+/* ======== src/core/settle.js */
 /* ---- which month a payment answers for
    A payment made on the Settle up page carries the month it settles. Paying
    October's rent in November then clears October, while the cash still leaves
@@ -1020,6 +692,7 @@ function paidForMonth(type,detail){
     if(e.m?e.m!==m:!inPer(e.d))continue;
     t+=num(e.out);}
   return t;}
+
 /* What a supplier is owed is a running total, so a payment that answers for an
    earlier month must still count in every month after it, not only in its own. */
 function settlesOn(e){return e.m?endOfMonth(e.m):ymd(e.d);}
@@ -1074,12 +747,8 @@ function duePartners(){return partners().map(p=>{
   if(p.bal>0)return {x:p.name,amt:mround(p.bal),t:'Partner Settlement',note};
   if(p.bal<0)return {x:p.name,amt:0,over:-p.bal,note};
   return {x:p.name,amt:0,note,done:p.paid>0?'paid':(p.wd>0?'taken in advances':'nothing to pay')};});}
-function partnerNote(p){
-  return money(p.profit)+' share'
-    +(p.wd?' \u2212 '+money(p.wd)+' already taken':'')
-    +(p.bf>0?' + '+money(p.bf)+' brought forward':'')
-    +(p.bf<0?' \u2212 '+money(-p.bf)+' owed from last month':'');}
 
+/* ======== src/core/flow.js */
 /* ---- where the money went: every kind, every name, openable.
    Moving money between pots is left out: nothing arrives or leaves, it only shifts. */
 function cashFlow(){
@@ -1096,131 +765,15 @@ function cashFlow(){
       rows:Object.keys(m[k].by).map(n=>[n,m[k].by[n]]).sort((a,b)=>b[1]-a[1])}))
       .sort((a,b)=>b.total-a.total);
   return {out:shape(out),inn:shape(inn)};}
+
 /* everything this name did this month, whatever kind it was filed under */
 function drillRows(name){return byDate(S.cb.filter(e=>inPer(e.d)&&(e.x||'(not named)')===name));}
-function drillTable(name){
-  const rows=drillRows(name);
-  if(!rows.length)return '<div class="drill"><div class="empty">Nothing this month.</div></div>';
-  const o=rows.reduce((a,e)=>a+num(e.out),0),i=rows.reduce((a,e)=>a+num(e.in),0),dash='\u2014';
-  return `<div class="drill">
-    <div class="row" style="justify-content:flex-end;margin-bottom:6px">
-      <button class="mini" data-act="printName" data-x="${esc(name)}">Print ${esc(name)}</button></div>
-    ${tbl(
-    `<th>Date</th><th>Kind</th><th>From</th><th class="num">Out</th><th class="num">In</th>`,
-    rows.map(e=>`<tr><td>${esc(ymd(e.d))}</td><td>${esc(e.t)}</td><td>${esc(potOf(e))}</td>
-      <td class="num">${num(e.out)?money(e.out):dash}</td>
-      <td class="num">${num(e.in)?money(e.in):dash}</td></tr>`).join(''),
-    `<tr class="tot"><td colspan="3">${rows.length} entr${rows.length===1?'y':'ies'}</td>
-      <td class="num">${o?money(o):dash}</td><td class="num">${i?money(i):dash}</td></tr>`)}</div>`;}
+
 /* A bar is the row's share of its own kind, so the lengths mean the same thing
    everywhere: within a kind they compare, and the figure beside carries the money. */
 function share(v,total){return total>0?Math.max(2,(v/total)*100).toFixed(1):0;}
-function flowBlock(groups){
-  if(!groups.length)return '';
-  return groups.map(g=>`<div class="flowg">
-    <div class="flowh"><span>${esc(g.t)}</span>
-      <span class="val">${money(g.total)}</span>
-      <button class="mini" data-act="printKind" data-k="${esc(g.t)}">Print</button></div>
-    ${g.rows.map(r=>{const open=S.ui.drill===r[0];
-      return `<button class="barbtn" data-act="drill" data-x="${esc(r[0])}" aria-expanded="${open}">
-        <span>${esc(r[0])}</span>
-        <span class="track"><span class="fill" style="width:${share(r[1],g.total)}%"></span></span>
-        <span class="val">${money(r[1])} <span class="caret">${open?'\u25be':'\u203a'}</span></span>
-      </button>${open?drillTable(r[0]):''}`;}).join('')}
-  </div>`).join('');}
 
-/* ---- a supplier's account for the month: what was carried in, what came,
-   what was paid, what is left. Only credit receipts make debt; cash ones never did. */
-function supStatement(name){
-  const asAt=S.debt.asAt||'';
-  let opening=num((S.debt.brought||{})[name]);
-  const lines=[];let bought=0,paid=0;
-  for(const p of S.pu){
-    if(p.s!==name||p.terms==='Cash')continue;
-    const d=ymd(p.d);if(d<=asAt)continue;
-    if(d<S.ui.start)opening+=num(p.amt);
-    else if(d<=S.ui.end){bought+=num(p.amt);
-      lines.push({d,what:'Receipt'+(p.no?' '+p.no:'')+(p.w&&p.w!=='Several items'?' \u00b7 '+p.w:''),amt:num(p.amt)});}
-  }
-  for(const e of S.cb){
-    if(e.t!=='Supplier Payment'||e.x!==name)continue;
-    const d=ymd(e.d);if(d<=asAt)continue;
-    if(d<S.ui.start)opening-=num(e.out);
-    else if(d<=S.ui.end){paid+=num(e.out);
-      lines.push({d,what:'Paid \u00b7 '+potOf(e),amt:-num(e.out)});}
-  }
-  lines.sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0);
-  let stock=0;const cd=countForPeriod(),counts=cd&&hasCounts(cd)?countsFor(cd):{};
-  for(const it of S.setup.stockItems||[])if(it.supplier===name)stock+=itemValue(it,counts,cd);
-  return {name,opening,lines,bought,paid,closing:opening+bought-paid,stock:stock};}
-function supAll(){return (S.setup.suppliers||[]).map(supStatement)
-  .filter(x=>x.opening||x.lines.length||x.closing||x.stock);}
-function supTable(st){
-  const prev=monthName(shiftMonth(monthOf(S.ui.start),-1));
-  return `<div class="drill">
-    <div class="row" style="justify-content:flex-end;margin-bottom:6px">
-      <button class="mini" data-act="printSup" data-x="${esc(st.name)}">Print ${esc(st.name)}</button></div>
-    ${tbl(`<th>Date</th><th>What</th><th class="num">Amount</th>`,
-      `<tr><td>\u2014</td><td>Carried in from ${esc(prev)}</td><td class="num">${money(st.opening)}</td></tr>`+
-      st.lines.map(l=>`<tr><td>${esc(dm(l.d))}</td><td>${esc(l.what)}</td>
-        <td class="num ${l.amt<0?'pos':''}">${l.amt<0?'\u2212 '+money(-l.amt):money(l.amt)}</td></tr>`).join(''),
-      `<tr class="tot"><td colspan="2">Owed at the end of ${esc(monthName(monthOf(S.ui.start)))}</td>
-        <td class="num ${st.closing>0?'neg':''}">${money(st.closing)}</td></tr>`+
-      `<tr><td colspan="2" class="sub">Their stock still in the warehouse</td>
-        <td class="num">${money(st.stock)}</td></tr>`)}
-  </div>`;}
-
-/* ---- recent changes: the last things that happened to the books */
-function logWhen(t){
-  const d=new Date(t);if(isNaN(d))return '';
-  const hh=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
-  const day=localDay(d);
-  return day===today()?hh:(day.slice(8,10)+'/'+day.slice(5,7)+' '+hh);}
-function canUndo(e){return !e.undone&&e.id&&e.row&&(e.w==='cb'||e.w==='pu'||e.w==='rc')&&
-  (e.k==='add'||e.k==='del'||(e.k==='edit'&&e.old));}
-const UNDO_WORD={add:'Remove it again',del:'Put it back',edit:'Change it back'};
-const LOG_VERB={add:'Added',del:'Deleted',edit:'Changed',note:''};
-function recentCard(){
-  const all=(S.log||[]).slice().reverse();
-  const show=S.ui.logAll?all:all.slice(0,10);
-  return `<div class="card">
-    <div class="cardhead"><h2>Recent changes</h2>
-      ${all.length?`<button class="mini" data-act="printLog">Print</button>`:''}</div>
-    <p class="sub">Everything that has happened to the books, newest first. If something was a mistake, put it back from here.</p>
-    ${!all.length?'<div class="empty">Nothing has changed yet.</div>':
-      `<div class="logs">${show.map(e=>{
-        const i=e.id||'';
-        return `<div class="logrow ${e.k}">
-          <span class="logt">${esc(logWhen(e.t))}</span>
-          <span class="logs2"><strong>${esc(LOG_VERB[e.k]||'')}</strong> ${esc(e.s)}
-            ${e.who?`<span class="logw">${esc(e.who)}</span>`:''}
-            ${e.undone?'<span class="logw">put back</span>':''}</span>
-          <span>${canUndo(e)?`<button class="mini" data-act="undo" data-i="${esc(i)}">${UNDO_WORD[e.k]}</button>`:''}</span>
-        </div>`;}).join('')}</div>
-      ${all.length>10?`<div class="row" style="margin-top:10px">
-        <button class="mini" data-act="logAll">${S.ui.logAll?'Show just the last 10':'Show all '+all.length}</button></div>`:''}`}
-  </div>`;}
-/* Putting one back is itself a change, so it shows up in the list too. */
-function undoLog(id){
-  const e=(S.log||[]).find(x=>x.id===id);if(!e||!canUndo(e))return;
-  const arr=e.w==='cb'?S.cb:(e.w==='pu'?S.pu:S.rc);
-  const at=arr.findIndex(r=>r.id===e.row.id);
-  /* Only undo what is still as it was. If the row has been touched since, say so
-     rather than quietly throwing the newer change away. */
-  if(at>=0&&JSON.stringify(arr[at])!==JSON.stringify(e.row)){
-    flash('That has been changed again since. Put it right on the Cashbook instead.');return;}
-  if(e.k==='add'){if(at>=0)arr.splice(at,1);}
-  else if(e.k==='del'){if(at<0)arr.push(deep(e.row));else{flash('That is already back.');return;}}
-  else{if(at>=0)arr[at]=deep(e.old);else{flash('That row is gone, so there is nothing to change back.');return;}}
-  e.undone=true;
-  writeLocal();render();
-  flash(e.k==='del'?'Put back.':'Undone.');}
-function slipLog(){
-  const all=(S.log||[]).slice().reverse().slice(0,40);
-  if(!all.length)return slipHead('Recent changes')+'<div class="sl-row"><span>Nothing yet.</span></div>';
-  return slipHead('Recent changes')+all.map(e=>
-    `<div class="sl-row"><span>${esc(logWhen(e.t))} ${esc((LOG_VERB[e.k]||'')+' '+e.s)}</span><b></b></div>`).join('');}
-
+/* ======== src/core/checks.js */
 /* ---- checks that watch the business */
 function checks(){
   const out=[],r=result(),prev=lastClosed(),pay=payroll(),sup=suppliers(),prt=partners();
@@ -1328,9 +881,895 @@ function checks(){
   else add('ok','Every amount is payable in real notes','multiples of '+ns);
   return out;}
 
+/* ======== src/store/local.js */
+let storeOK=true;
 
+function readLocal(){try{const r=localStorage.getItem(LS);return r?JSON.parse(r):null;}catch(e){storeOK=false;return null;}}
+
+function snapshotAll(){return {v:1,savedAt:new Date().toISOString(),
+  setup:S.setup,cb:S.cb,pu:S.pu,rc:S.rc,inv:S.inv,ledger:S.ledger,closed:S.closed,debt:S.debt,elec:S.elec,log:S.log};}
+
+function applyAll(d){
+  S.setup=d.setup||null;S.cb=d.cb||[];S.pu=d.pu||[];S.rc=d.rc||[];
+  S.inv=d.inv||{};S.ledger=d.ledger||[];S.closed=d.closed||{};
+  S.debt=d.debt||{asAt:null,brought:{}};S.elec=d.elec||null;S.log=d.log||[];}
+
+function writeLocal(quiet){
+  if(quiet)LAST=deep(loggable()); else noteChanges();
+  let ok=true;
+  if(storeOK){try{localStorage.setItem(LS,JSON.stringify(snapshotAll()));}
+    catch(e){storeOK=false;ok=false;
+      note('This browser will not store the books (private window, or storage full). Save a backup file from the Setup tab before closing this page.');}}
+  else ok=false;
+  if(!quiet)bkSoon();
+  return Promise.resolve(ok);}
+
+function stampOf(d){const t=Date.parse((d&&d.savedAt)||'');return isFinite(t)?t:0;}
+
+function saveSetup(){return writeLocal();}
+
+function saveLedger(){return writeLocal();}
+
+function saveDebt(){return writeLocal();}
+
+function saveElec(){return writeLocal();}
+
+function saveCb(){return writeLocal();}
+
+function saveYr(){return writeLocal();}
+
+function saveInv(date){const d=S.inv[date];
+  if(d&&hasCounts(date)&&!S.closed[monthOf(date)])d.closing=mround(stockValue(date));
+  return writeLocal();}
+
+function saveClosed(){return writeLocal();}
+
+function idb(){return new Promise((res,rej)=>{const r=indexedDB.open('tw-books',1);
+  r.onupgradeneeded=()=>{r.result.createObjectStore('h');};
+  r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+
+function idbGet(k){return idb().then(db=>new Promise((res,rej)=>{
+  const q=db.transaction('h','readonly').objectStore('h').get(k);
+  q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);}));}
+
+function idbSet(k,v){return idb().then(db=>new Promise((res,rej)=>{
+  const q=db.transaction('h','readwrite').objectStore('h').put(v,k);
+  q.onsuccess=()=>res();q.onerror=()=>rej(q.error);}));}
+
+/* ---- the manual file, still there for moving between machines */
+function backupNow(){
+  const blob=new Blob([JSON.stringify(snapshotAll(),null,1)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='twilight-books-'+today()+'.json';
+  document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);
+  flash('Backup file saved to your downloads.');}
+
+function restoreFrom(file){
+  const r=new FileReader();
+  r.onload=()=>{try{
+      const d=JSON.parse(r.result);
+      if(!d||!d.setup)throw new Error('that file does not hold the books');
+      applyAll(d);writeLocal();render();
+      flash('Books restored from '+file.name+(d.savedAt?' (saved '+ymd(d.savedAt)+')':'')+'.');
+    }catch(e){flash('Could not read that file: '+e.message);}};
+  r.readAsText(file);}
+
+/* ======== src/store/log.js */
+/* ---- what changed, and when
+   Nothing reports its own changes; the books are simply compared with how they
+   were a moment ago. That way every route in — typing, a Pay button, a device at
+   home — is caught the same way, and nothing can quietly slip past. */
+let LAST=null;
+
+function loggable(){return {cb:S.cb,pu:S.pu,rc:S.rc,inv:S.inv,setup:S.setup,closed:S.closed,
+  elec:S.elec,debt:S.debt,ledger:S.ledger};}
+
+function rowDesc(w,r){
+  if(w==='cb')return r.t+' \u00b7 '+(r.x||'')+' \u00b7 '+(num(r.in)?money(r.in)+' in':money(r.out)+' out')+' \u00b7 '+ymd(r.d);
+  if(w==='pu')return 'Receipt'+(r.no?' '+r.no:'')+' \u00b7 '+(r.s||'')+' \u00b7 '+money(r.amt)+' \u00b7 '+ymd(r.d);
+  if(w==='rc')return 'Cash count '+ymd(r.d)+' \u00b7 '+money(countedTotal(r));
+  return '';}
+
+function diffRows(w,a,b,out){
+  const A={},B={};
+  (a||[]).forEach(r=>{A[r.id]=r;});(b||[]).forEach(r=>{B[r.id]=r;});
+  Object.keys(B).forEach(id=>{
+    if(!A[id])out.push({k:'add',w,s:rowDesc(w,B[id]),row:deep(B[id])});
+    else if(JSON.stringify(A[id])!==JSON.stringify(B[id]))
+      out.push({k:'edit',w,s:rowDesc(w,A[id])+'  \u2192  '+rowDesc(w,B[id]),row:deep(B[id]),old:deep(A[id])});});
+  Object.keys(A).forEach(id=>{if(!B[id])out.push({k:'del',w,s:rowDesc(w,A[id]),row:deep(A[id])});});}
+
+function diffSetup(a,b,out){
+  if(!a||!b)return;
+  [['staff','Salary','salary',1],['fixedExpenses','Fixed expense','amount',1],
+   ['partners','Share','share',2],['pots','Cash pot',null,0]].forEach(function(spec){
+    const k=spec[0],label=spec[1],f=spec[2],kind=spec[3],A={},B={};
+    ((a[k])||[]).forEach(x=>{A[x.name]=x;});((b[k])||[]).forEach(x=>{B[x.name]=x;});
+    Object.keys(B).forEach(n=>{
+      if(!A[n])out.push({k:'edit',w:'setup',s:label+' added \u00b7 '+n});
+      else if(f&&num(A[n][f])!==num(B[n][f]))
+        out.push({k:'edit',w:'setup',s:label+' \u00b7 '+n+' \u00b7 '+
+          (kind===2?pct(A[n][f]):money(A[n][f]))+' \u2192 '+(kind===2?pct(B[n][f]):money(B[n][f]))});});
+    Object.keys(A).forEach(n=>{if(!B[n])out.push({k:'edit',w:'setup',s:label+' removed \u00b7 '+n});});});
+  const A={},B={};
+  ((a.stockItems)||[]).forEach(x=>{A[x.name]=x;});((b.stockItems)||[]).forEach(x=>{B[x.name]=x;});
+  Object.keys(B).forEach(n=>{if(A[n]&&num(A[n].price)!==num(B[n].price))
+    out.push({k:'edit',w:'setup',s:'Price \u00b7 '+n+' \u00b7 '+money(A[n].price)+' \u2192 '+money(B[n].price)});
+    if(!A[n])out.push({k:'edit',w:'setup',s:'Stock item added \u00b7 '+n});});
+  Object.keys(A).forEach(n=>{if(!B[n])out.push({k:'edit',w:'setup',s:'Stock item removed \u00b7 '+n});});
+  if(JSON.stringify(a.suppliers||[])!==JSON.stringify(b.suppliers||[]))
+    out.push({k:'edit',w:'setup',s:'Supplier list changed'});
+  const an=(a.business||{}).name,bn=(b.business||{}).name;
+  if(an!==bn)out.push({k:'edit',w:'setup',s:'Business name \u00b7 '+an+' \u2192 '+bn});
+  const ar=num((a.business||{}).rounding),br=num((b.business||{}).rounding);
+  if(ar!==br)out.push({k:'edit',w:'setup',s:'Smallest banknote \u00b7 '+money(ar)+' \u2192 '+money(br)});
+  const ap={},bp={};
+  ((a.pots)||[]).forEach(x=>{ap[x.name]=x.kind||'own';});((b.pots)||[]).forEach(x=>{bp[x.name]=x.kind||'own';});
+  Object.keys(bp).forEach(n=>{if(ap[n]&&ap[n]!==bp[n])
+    out.push({k:'edit',w:'setup',s:'Cash pot \u00b7 '+n+' \u00b7 '+ap[n]+' \u2192 '+bp[n]});});
+  if(JSON.stringify(a.conversions||{})!==JSON.stringify(b.conversions||{}))
+    out.push({k:'edit',w:'setup',s:'Unit conversions changed'});
+  if(JSON.stringify(a.tare||[])!==JSON.stringify(b.tare||[]))
+    out.push({k:'edit',w:'setup',s:'Bucket weights changed'});
+  if(JSON.stringify(a.categories||[])!==JSON.stringify(b.categories||[]))
+    out.push({k:'edit',w:'setup',s:'Stock categories changed'});}
+
+function diffInv(a,b,out){
+  a=a||{};b=b||{};
+  Object.keys(b).forEach(d=>{
+    if(!a[d])out.push({k:'add',w:'inv',s:'Stock count opened \u00b7 '+d});
+    else if(JSON.stringify(a[d])!==JSON.stringify(b[d]))
+      out.push({k:'edit',w:'inv',s:'Stock count changed \u00b7 '+d+' \u00b7 '+money(booked(d))});});
+  Object.keys(a).forEach(d=>{if(!b[d])out.push({k:'del',w:'inv',s:'Stock count deleted \u00b7 '+d});});}
+
+function diffSmall(a,b,out){
+  a=a||{};b=b||{};
+  Object.keys(b).forEach(m=>{if(!a[m])out.push({k:'add',w:'closed',s:'Month closed \u00b7 '+monthName(m)});});
+  Object.keys(a).forEach(m=>{if(!b[m])out.push({k:'del',w:'closed',s:'Month reopened \u00b7 '+monthName(m)});});}
+
+function diffElec(a,b,out){
+  const A=((a&&a.rows)||[]),B=((b&&b.rows)||[]),am={},bm={};
+  A.forEach(r=>{am[r.m]=r;});B.forEach(r=>{bm[r.m]=r;});
+  Object.keys(bm).forEach(m=>{if(JSON.stringify(am[m]||{})!==JSON.stringify(bm[m]))
+    out.push({k:'edit',w:'elec',s:'Electricity \u00b7 '+monthName(m)+' \u00b7 '+money(elecCharged(m))});});
+  if(JSON.stringify((a&&a.factors)||{})!==JSON.stringify((b&&b.factors)||{}))
+    out.push({k:'edit',w:'elec',s:'Electricity rates changed'});}
+
+function noteChanges(){
+  const now=loggable();
+  if(!LAST){LAST=deep(now);return;}
+  const out=[];
+  diffRows('cb',LAST.cb,now.cb,out);
+  diffRows('pu',LAST.pu,now.pu,out);
+  diffRows('rc',LAST.rc,now.rc,out);
+  diffSetup(LAST.setup,now.setup,out);
+  diffInv(LAST.inv,now.inv,out);
+  diffSmall(LAST.closed,now.closed,out);
+  diffElec(LAST.elec,now.elec,out);
+  if(JSON.stringify(LAST.debt||{})!==JSON.stringify(now.debt||{}))
+    out.push({k:'edit',w:'debt',s:'Supplier debt brought forward changed \u00b7 as at '+((now.debt||{}).asAt||'\u2014')});
+  if(JSON.stringify(LAST.ledger||[])!==JSON.stringify(now.ledger||[]))
+    out.push({k:'edit',w:'ledger',s:'Partner ledger changed'});
+  LAST=deep(now);
+  if(!out.length)return;
+  const at=new Date().toISOString(),who=BK.who||'';
+  if(out.length>25)S.log.push({id:rid(),t:at,who,k:'note',w:'all',
+    s:out.length+' things changed at once \u2014 a backup was loaded, most likely'});
+  else out.forEach(e=>{e.id=rid();e.t=at;e.who=who;S.log.push(e);
+    /* kept so that, if another device saved first, these can be put back on top
+       of its copy instead of one of the two evenings being lost */
+    if(e.k==='add'&&e.row&&(e.w==='cb'||e.w==='pu'||e.w==='rc'))BK.added.push({w:e.w,row:deep(e.row)});});
+  if(S.log.length>200)S.log=S.log.slice(-200);}
+
+/* ---- recent changes: the last things that happened to the books */
+function logWhen(t){
+  const d=new Date(t);if(isNaN(d))return '';
+  const hh=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  const day=localDay(d);
+  return day===today()?hh:(day.slice(8,10)+'/'+day.slice(5,7)+' '+hh);}
+
+function canUndo(e){return !e.undone&&e.id&&e.row&&(e.w==='cb'||e.w==='pu'||e.w==='rc')&&
+  (e.k==='add'||e.k==='del'||(e.k==='edit'&&e.old));}
+
+const UNDO_WORD={add:'Remove it again',del:'Put it back',edit:'Change it back'};
+
+const LOG_VERB={add:'Added',del:'Deleted',edit:'Changed',note:''};
+
+/* Putting one back is itself a change, so it shows up in the list too. */
+function undoLog(id){
+  const e=(S.log||[]).find(x=>x.id===id);if(!e||!canUndo(e))return;
+  const arr=e.w==='cb'?S.cb:(e.w==='pu'?S.pu:S.rc);
+  const at=arr.findIndex(r=>r.id===e.row.id);
+  /* Only undo what is still as it was. If the row has been touched since, say so
+     rather than quietly throwing the newer change away. */
+  if(at>=0&&JSON.stringify(arr[at])!==JSON.stringify(e.row)){
+    flash('That has been changed again since. Put it right on the Cashbook instead.');return;}
+  if(e.k==='add'){if(at>=0)arr.splice(at,1);}
+  else if(e.k==='del'){if(at<0)arr.push(deep(e.row));else{flash('That is already back.');return;}}
+  else{if(at>=0)arr[at]=deep(e.old);else{flash('That row is gone, so there is nothing to change back.');return;}}
+  e.undone=true;
+  writeLocal();render();
+  flash(e.k==='del'?'Put back.':'Undone.');}
+
+/* ======== src/store/helper.js */
+async function connect(){
+  const saved=readLocal();
+  BK.freshStart=!saved;
+  /* Work out where the backups live before a single byte is written. A browser that
+     has never seen these books would otherwise start from the built-in sample and
+     write that straight over a real backup. */
+  await bkDetect();
+  let start=saved,tookFolder=false,unreadable=false,heldBack=false;
+  if(BK.mode==='helper'){
+    /* One set of books for every device: they live in the folder, not in a browser.
+       Which copy is newer is settled by the folder's own clock - the seq the helper
+       reports - because two devices' clocks disagree and the faster one would win
+       every time. If the folder has not moved since we last wrote it, what is here
+       may include work done while the helper was closed, so it stays. */
+    const got=await bkFetchBooks();
+    if(!got.ok)unreadable=true;
+    else if(got.data){
+      let ours=false,unsent=false;
+      try{ours=(localStorage.getItem('tw-lastSeq')||'')===String(BK.seq||'');
+          unsent=localStorage.getItem('tw-unsent')==='1';}catch(e){}
+      /* Work that never reached the folder always wins: it exists nowhere else.
+         Otherwise the folder is taken whenever it has moved since this device
+         last wrote it, because then another device has been at it. */
+      if(!saved)              {start=got.data;tookFolder=true;BK.freshStart=false;}
+      else if(unsent)         {heldBack=true;}
+      else if(!ours||stampOf(got.data)>stampOf(saved))
+                              {start=got.data;tookFolder=true;BK.freshStart=false;}
+    }
+  }
+  applyAll(start||SEED);
+  BK.stamp=stampOf(start);
+  noteChanges();
+  if(tookFolder)writeLocal(true);
+  else if(!saved&&storeOK)writeLocal();
+  S.db=true;
+  try{if(navigator.storage&&navigator.storage.persist)await navigator.storage.persist();}catch(e){}
+  if(BK.state==='ready'&&!tookFolder&&!unreadable)bkWrite(false);
+  /* said after the catching-up save, or the save's own "all clear" would wipe it */
+  if(heldBack)setTimeout(()=>flash('This device had entries that never reached the folder. '
+    +'They were kept and have now been written up.'),3500);
+  if(unreadable)note('The books in the folder could not be read just now, so nothing has been '
+    +'written over them. What is on this screen is this device\u2019s own copy. '
+    +'Reopen Start Twilight, then reload this page.');
+  bkWatch();
+  if(!storeOK)note('This browser will not store anything. Work here is lost when the page closes — save a backup file from the Setup tab.');
+  else if(BK.state==='needs')showGate();
+}
+
+function bkWatch(){
+  if(BK.mode!=='helper'||bkWatch.on)return;
+  bkWatch.on=setInterval(async function(){
+    /* something typed here is still on its way to the folder: leave it alone */
+    if(BK.state!=='ready'||BK.pending||BK.dirty)return;
+    let j=null;
+    try{const r=await fetch('state',{cache:'no-store'});if(!r.ok)return;j=await r.json();}catch(e){return;}
+    if(!j||!j.seq||j.seq===BK.seq)return;
+    const got=await bkFetchBooks();
+    if(!got.ok||!got.data)return;            /* could not be read: try again next tick */
+    const d=got.data;
+    if(stampOf(d)<=BK.stamp){BK.seq=j.seq;return;}
+    const a=document.activeElement;
+    if(a&&(a.tagName==='INPUT'||a.tagName==='SELECT'))return;   /* mid-entry: come back next tick */
+    BK.seq=j.seq;BK.stamp=stampOf(d);
+    applyAll(d);writeLocal(true);render();
+    flash('Brought up to date \u2014 these books were changed on another device.');
+  },5000);}
+
+/* the books already sitting in the backup folder, if there are any */
+async function bkFetchBooks(){
+  /* {ok:true,data} - read it.  {ok:true,data:null} - the folder has none yet.
+     {ok:false} - could not be read, which is NOT the same thing: nothing may be
+     written over books we have failed to look at. */
+  try{
+    if(BK.mode==='helper'){const r=await fetch('books',{cache:'no-store'});
+      if(r.status===404)return {ok:true,data:null};
+      if(!r.ok)return {ok:false};
+      const d=await r.json();return {ok:true,data:(d&&d.setup)?d:null};}
+    if(BK.dir){const fh=await BK.dir.getFileHandle('twilight-books.json');
+      const d=JSON.parse(await (await fh.getFile()).text());return {ok:true,data:(d&&d.setup)?d:null};}
+  }catch(e){
+    if(e&&(e.name==='NotFoundError'))return {ok:true,data:null};
+    return {ok:false};}
+  return {ok:true,data:null};}
+
+/* the moment a folder becomes reachable: never write the sample over real books */
+async function bkAdopt(){
+  if(!BK.freshStart)return false;
+  BK.freshStart=false;
+  const got=await bkFetchBooks();
+  if(!got.ok||!got.data)return false;
+  const d=got.data;
+  applyAll(d);writeLocal();render();
+  flash('Picked up the books already in '+BK.name+'.');
+  return true;}
+
+/* Windows re-asks for the folder every time this page opens, so ask straight away
+   rather than leaving a note on a tab nobody visits. Nothing can be typed until
+   it is answered one way or the other. */
+function showGate(){
+  const g=document.getElementById('gate');if(!g)return;
+  const f=document.getElementById('gateFolder');if(f)f.textContent=BK.name||'backup';
+  g.hidden=false;document.body.style.overflow='hidden';}
+
+function hideGate(){
+  const g=document.getElementById('gate');if(g)g.hidden=true;
+  document.body.style.overflow='';}
+
+function gateSay(msg,why){
+  const m=document.getElementById('gateMsg');if(m)m.innerHTML=msg;
+  const w=document.getElementById('gateWhy');if(w&&why!=null)w.textContent=why;}
+
+async function gateAllow(){
+  if(!BK.dir)return gateOther();
+  gateSay('Waiting for Chrome\u2026');
+  let p=null;
+  try{p=await BK.dir.requestPermission({mode:'readwrite'});}
+  catch(e){
+    gateSay('That folder could not be reached \u2014 it may have been moved, renamed or deleted.',
+            'Choose the folder again, or open without backing up and set it later on the Setup tab.');
+    return;}
+  if(p!=='granted'){
+    gateSay('Chrome did not give permission, so nothing can be written to <strong>'+esc(BK.name)+'</strong>.',
+            'Press the button again and choose Allow, or open without backing up.');
+    return;}
+  BK.state='ready';
+  await bkAdopt();
+  const ok=await bkWrite(true);
+  hideGate();note('');render();
+  flash(ok?('Backups to '+BK.name+' are running again.')
+          :('Allowed, but nothing could be written to '+BK.name+' yet.'));}
+
+async function gateOther(){
+  await bkChoose();
+  if(BK.state==='ready'){hideGate();note('');}
+  else gateSay('No folder was chosen.','Pick a folder, or open without backing up and set it later on the Setup tab.');}
+
+function gateSkip(){
+  hideGate();
+  note('Nothing is being backed up this session. Tonight\u2019s work lives only in this browser until you allow the '
+       +BK.name+' folder on the Setup tab.');}
+
+/* ---- the backup folder: chosen once, remembered, written to on every change */
+const BK={dir:null,state:'none',last:null,lastDaily:null,name:'',remember:true,mode:'picker',err:false,freshStart:false,who:'',dirty:false,added:[],seq:'',stamp:0,pending:false};
+
+async function bkDetect(){
+  /* Served by the helper on this computer? Then it does the writing and the browser
+     is never asked for anything. Opened as a loose file instead, fall back to the
+     folder the browser remembers, which it re-asks about every time. */
+  if(location.protocol==='http:'||location.protocol==='https:'){
+    try{
+      const r=await fetch('ping',{cache:'no-store'});
+      if(r.ok){const j=await r.json();
+        if(j&&j.ok){BK.mode='helper';BK.name=j.folder||'the Twilight folder';BK.state='ready';BK.seq=j.seq||'';
+          BK.who=(!j.you||/^127\./.test(j.you))?'at the lounge':'from '+j.you;
+          try{BK.lastDaily=localStorage.getItem('tw-lastDaily')||null;}catch(e){}
+          return;}}
+    }catch(e){}
+  }
+  if(!window.showDirectoryPicker){BK.state='unsupported';return;}
+  try{
+    const h=await idbGet('dir');
+    if(!h){BK.state='none';return;}
+    BK.dir=h;BK.name=h.name||'backup';
+    const p=await h.queryPermission({mode:'readwrite'});
+    BK.state=(p==='granted')?'ready':'needs';
+    try{BK.lastDaily=localStorage.getItem('tw-lastDaily')||null;}catch(e){}
+  }catch(e){BK.state='none';}}
+
+async function bkChoose(){
+  let h;
+  try{h=await window.showDirectoryPicker({mode:'readwrite',id:'twilight-backup'});}
+  catch(e){if(e&&e.name!=='AbortError')flash('Could not open that folder: '+(e.message||e.name));return;}
+  BK.dir=h;BK.name=h.name||'backup';BK.state='ready';BK.remember=true;
+  try{await idbSet('dir',h);}catch(e){BK.remember=false;}
+  await bkAdopt();
+  const ok=await bkWrite(true);render();note('');
+  flash(ok?('Every change is now also written to the '+BK.name+' folder.')
+         :('The folder was accepted but nothing could be written to it yet.'));}
+
+async function bkReconnect(){
+  if(!BK.dir)return bkChoose();
+  try{
+    const p=await BK.dir.requestPermission({mode:'readwrite'});
+    if(p==='granted'){BK.state='ready';await bkWrite(true);render();note('');flash('Backups to '+BK.name+' are running again.');}
+    else flash('Permission was not given, so nothing is being backed up.');
+  }catch(e){flash('Could not reconnect: '+(e.message||e.name));}}
+
+async function bkStop(){
+  try{await idbSet('dir',null);}catch(e){}
+  BK.dir=null;BK.state='none';BK.name='';render();
+  flash('Automatic backups stopped. The folder and its files are untouched.');}
+
+let bkT=null;
+
+function bkSoon(){if(BK.state!=='ready')return;BK.dirty=true;
+  clearTimeout(bkT);bkT=setTimeout(()=>bkWrite(false),2500);}
+
+async function bkPut(name,txt){
+  const fh=await BK.dir.getFileHandle(name,{create:true});
+  const w=await fh.createWritable();await w.write(txt);await w.close();}
+
+function bkTick(){const el=document.getElementById('bkStatus');if(el)el.textContent=bkText();}
+
+async function bkWrite(force){
+  if(BK.state!=='ready')return false;
+  const snap=snapshotAll(),txt=JSON.stringify(snap,null,1),d=today();
+  if(BK.mode==='helper'){
+    BK.pending=true;
+    try{
+      let r=await fetch('save',{method:'POST',
+        headers:{'Content-Type':'application/json','X-Twilight':'1','X-Twilight-Seq':String(BK.seq||'')},
+        body:txt});
+      if(r.status===409){
+        /* Another device saved between our reading the books and writing them.
+           Take its copy and put our own new entries on top, rather than letting
+           one of the two evenings disappear. */
+        const got=await bkFetchBooks();
+        if(got.ok&&got.data){
+          const mine=BK.added.slice();
+          applyAll(got.data);
+          let put=0;
+          mine.forEach(a=>{const arr=a.w==='cb'?S.cb:(a.w==='pu'?S.pu:S.rc);
+            if(!arr.some(x=>x.id===a.row.id)){arr.push(a.row);put++;}});
+          try{const j=await r.json();if(j&&j.seq)BK.seq=j.seq;}catch(e){}
+          const snap2=snapshotAll();
+          r=await fetch('save',{method:'POST',
+            headers:{'Content-Type':'application/json','X-Twilight':'1','X-Twilight-Seq':String(BK.seq||'')},
+            body:JSON.stringify(snap2,null,1)});
+          if(r.ok){BK.stamp=stampOf(snap2);render();
+            if(put)flash('Another device had saved first \u2014 '+put+' of your entries were put back on top of it.');}
+        }
+      }
+      if(!r.ok)throw new Error('the helper refused it');
+      try{const j=await r.json();if(j&&j.seq)BK.seq=j.seq;}catch(e){}
+      BK.last=new Date();BK.lastDaily=d;BK.err=false;BK.pending=false;BK.dirty=false;
+      BK.added=[];
+      if(!BK.stamp||BK.stamp<stampOf(snap))BK.stamp=stampOf(snap);
+      try{localStorage.removeItem('tw-unsent');}catch(e){}
+      try{localStorage.setItem('tw-lastSeq',String(BK.seq||''));}catch(e){}
+      try{localStorage.setItem('tw-lastDaily',d);}catch(e){}
+      note('');bkTick();return true;
+    }catch(e){
+      /* the window was closed, or the computer is busy — keep the books, keep trying */
+      BK.err=true;BK.pending=false;
+      /* survives closing the app: on the way back in, this copy must not be
+         replaced by an older one sitting in the folder */
+      try{localStorage.setItem('tw-unsent','1');}catch(e){}
+      note('The Twilight helper window is not answering, so nothing is being copied to '+BK.name
+           +' right now. The books are safe in this browser. Reopen "Start Twilight" and it picks up again.');
+      bkTick();return false;}
+  }
+  if(!BK.dir)return false;
+  try{
+    await bkPut('twilight-books.json',txt);
+    if(force||BK.lastDaily!==d){
+      await bkPut('twilight-books-'+d+'.json',txt);
+      BK.lastDaily=d;try{localStorage.setItem('tw-lastDaily',d);}catch(e){}}
+    BK.last=new Date();
+    const el=document.getElementById('bkStatus');if(el)el.textContent=bkText();
+    return true;
+  }catch(e){BK.state='needs';
+    note('Could not write the backup to '+BK.name+'. Open Setup and press Reconnect.');
+    render();return false;}}
+
+function bkText(){
+  if(BK.mode==='helper')
+    return BK.err
+      ? 'Paused \u2014 the helper window is not answering. The books are safe here meanwhile.'
+      : 'Saved into '+BK.name+' by the helper on this computer'
+        +(BK.last?' \u00b7 last saved '+String(BK.last.getHours()).padStart(2,'0')+':'+String(BK.last.getMinutes()).padStart(2,'0'):'')
+        +'. Nothing to allow, nothing to press.';
+  if(BK.state==='unsupported')return 'This browser cannot write to a folder on its own — use the backup button instead.';
+  if(BK.state==='none')return 'No backup folder chosen. Nothing is being copied anywhere.';
+  if(BK.state==='needs')return 'Paused. The browser needs permission for the '+BK.name+' folder again.';
+  return 'Writing to the '+BK.name+' folder'
+    +(BK.last?' · last saved '+String(BK.last.getHours()).padStart(2,'0')+':'+String(BK.last.getMinutes()).padStart(2,'0'):'')
+    +(BK.lastDaily===today()?' · today’s dated copy done':'')
+    +(BK.remember===false?'. This browser cannot remember the folder, so it must be chosen again each time this page opens.':'.');}
+
+/* ======== src/store/update.js */
+/* Another device saved? Take its copy, unless ours is newer or something is being typed. */
+/* ---- updating
+   The helper does the downloading, because only it can write to the folder.
+   The books are never part of an update: the helper keeps its own list of the
+   files it will replace and no books file is on it, so there is nothing an
+   update can do to what you have entered. */
+async function checkUpdate(el){
+  const msg=document.getElementById('updmsg');
+  const say=t=>{if(msg)msg.textContent=t;};
+  if(el)el.disabled=true;
+  say('Looking\u2026');
+  try{
+    const r=await fetch('update',{cache:'no-store'});
+    const j=await r.json();
+    if(j.status==='updated'){
+      const kept=j.books?' Your books were copied to '+j.books+' first.':'';
+      if(BK.dirty||BK.pending)
+        say('Updated to '+j.version+'.'+kept+' Close and reopen Twilight to start using it.');
+      else{say('Updated to '+j.version+'.'+kept+' Reloading\u2026');
+        setTimeout(function(){location.reload();},1800);}
+    }
+    else if(j.status==='current')say('This is already the newest ('+j.version+').');
+    else if(j.status==='offline')say('Could not reach GitHub just now. Nothing was changed.');
+    else if(j.status==='off')say('Update checking is switched off in TwilightHelper.ps1.');
+    else say('Could not update: '+(j.error||'something went wrong')+'. Nothing was changed.');
+  }catch(e){say('The Twilight window did not answer.');}
+  if(el)el.disabled=false;
+}
+
+/* ======== src/ui/dom.js */
+/* ============================================================ helpers */
+const $=s=>document.querySelector(s);
+
+/* note() is for things that stay until they are fixed; flash() is for a passing
+   word. A flash must never clear a standing warning about saving. */
+let noteSticky=false;
+
+function note(t){const el=$('#dbnote');if(!el)return;noteSticky=!!t;el.textContent=t||'';el.hidden=!t;}
+
+/* Rebuilding a tab throws away the field the person is moving to, so an edit made
+   by typing waits until they have finished with the inputs altogether. */
+function renderLater(){clearTimeout(renderLater.t);renderLater.t=setTimeout(function(){
+  const a=document.activeElement;
+  if(a&&(a.tagName==='INPUT'||a.tagName==='SELECT')){renderLater();return;}
+  render();},150);}
+
+function bar(){const nav=$('#tabs');
+  if(nav.childElementCount!==TABS.length)
+    nav.innerHTML=TABS.map(([k,l])=>`<button role="tab" data-tab="${k}">${l}</button>`).join('');
+  nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===S.ui.tab));}
+
+function tile(k,v,n,c){return `<div class="tile"><div class="k">${esc(k)}</div><div class="v ${c||''}">${v}</div>${n?`<div class="n">${esc(n)}</div>`:''}</div>`;}
+
+function tbl(head,rows,foot){return `<div class="tblbox"><table><thead><tr>${head}</tr></thead><tbody>${rows||''}${foot||''}</tbody></table></div>`;}
+
+function opts(list,val){return (list||[]).map(o=>`<option ${o===val?'selected':''}>${esc(o)}</option>`).join('');}
+
+function potOpts(val,kind){const l=(kind==='own'?ownPots():pots()).map(p=>p.name);
+  return opts(l.includes(val)||!val?l:[val].concat(l),val||defaultPot());}
+
+/* ============================================================ actions */
+function byId(a,id){return a.find(r=>r.id===id);}
+
+function flash(m){if(noteSticky&&!m)return;const el=$('#dbnote');if(!el)return;
+  el.textContent=m||'';el.hidden=!m;clearTimeout(flash.t);
+  flash.t=setTimeout(()=>{if(!noteSticky){el.textContent='';el.hidden=true;}},6000);}
+
+/* browsing is a view, not a setting — the app always opens on the current month */
+/* ---- printing, on the till roll by the counter.
+   Only the slip goes to the printer; the whole page steps aside and comes back. */
+function dm(d){const x=ymd(d);return x.slice(8,10)+'/'+x.slice(5,7);}
+
+/* every number field here holds one value you are replacing, not editing, so
+   arriving in one selects what is there and typing overwrites it.
+   A click focuses and then its own mouseup collapses the selection, so the
+   selection has to be made again after that. */
+function wantsAll(t){return t&&t.tagName==='INPUT'&&t.type==='number'&&t.value!=='';}
+
+function pickAll(t){try{t.select();}catch(e){}}
+
+/* a menu choice is finished the moment it is made, so it may redraw at once;
+   a typed figure may be one of several, so the redraw waits */
+function redraw(t){if(t&&t.tagName==='SELECT')render();else{header();renderLater();}}
+
+/* ======== src/ui/print.js */
+function slipLog(){
+  const all=(S.log||[]).slice().reverse().slice(0,40);
+  if(!all.length)return slipHead('Recent changes')+'<div class="sl-row"><span>Nothing yet.</span></div>';
+  return slipHead('Recent changes')+all.map(e=>
+    `<div class="sl-row"><span>${esc(logWhen(e.t))} ${esc((LOG_VERB[e.k]||'')+' '+e.s)}</span><b></b></div>`).join('');}
+
+function slipHead(title){
+  const biz=(S.setup.business&&S.setup.business.name)||'Twilight',n=new Date();
+  const hh=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');
+  return `<div class="sl-biz">${esc(biz)}</div>
+    <div class="sl-title">${esc(title)}</div>
+    <div class="sl-meta">${esc(monthName(monthOf(S.ui.start)))}</div>
+    <div class="sl-meta">printed ${esc(today())} ${hh}</div>
+    <div class="sl-rule"></div>`;}
+
+function slipRows(rows){
+  return rows.map(e=>`<div class="sl-row"><span>${dm(e.d)} ${esc(e.t)}</span>
+    <b>${num(e.out)?money(e.out):'+'+money(e.in)}</b></div>`).join('');}
+
+function slipName(name){
+  const rows=drillRows(name);
+  if(!rows.length)return slipHead(name)+'<div class="sl-row"><span>Nothing this month.</span></div>';
+  const o=rows.reduce((a,e)=>a+num(e.out),0),i=rows.reduce((a,e)=>a+num(e.in),0);
+  return slipHead(name)+slipRows(rows)+`<div class="sl-rule"></div>`+
+    (o?`<div class="sl-row sl-tot"><span>Out</span><b>${money(o)}</b></div>`:'')+
+    (i?`<div class="sl-row sl-tot"><span>In</span><b>${money(i)}</b></div>`:'')+
+    `<div class="sl-row"><span>${rows.length} entr${rows.length===1?'y':'ies'}</span><b></b></div>`;}
+
+function slipKind(kind){
+  const fl=cashFlow(),g=fl.out.concat(fl.inn).filter(x=>x.t===kind)[0];
+  if(!g)return slipHead(kind)+'<div class="sl-row"><span>Nothing this month.</span></div>';
+  return slipHead(kind)+
+    g.rows.map(r=>`<div class="sl-row"><span>${esc(r[0])}</span><b>${money(r[1])}</b></div>`).join('')+
+    `<div class="sl-rule"></div><div class="sl-row sl-tot"><span>Total</span><b>${money(g.total)}</b></div>`;}
+
+function slipAll(){
+  const fl=cashFlow();
+  const part=(label,groups)=>!groups.length?'':`<div class="sl-sub">${label}</div>`+
+    groups.map(g=>`<div class="sl-row sl-tot"><span>${esc(g.t)}</span><b>${money(g.total)}</b></div>`+
+      g.rows.map(r=>`<div class="sl-row"><span>&nbsp;&nbsp;${esc(r[0])}</span><b>${money(r[1])}</b></div>`).join('')
+    ).join('<div class="sl-rule"></div>');
+  const o=fl.out.reduce((a,g)=>a+g.total,0),i=fl.inn.reduce((a,g)=>a+g.total,0);
+  return slipHead('Where the money went')+part('Went out',fl.out)+
+    (fl.inn.length?'<div class="sl-rule"></div>'+part('Came in',fl.inn):'')+
+    `<div class="sl-rule"></div>
+     <div class="sl-row sl-tot"><span>Out</span><b>${money(o)}</b></div>
+     <div class="sl-row sl-tot"><span>In</span><b>${money(i)}</b></div>`;}
+
+function slipSup(name){
+  const st=supStatement(name),prev=monthName(shiftMonth(monthOf(S.ui.start),-1));
+  return slipHead(st.name)+
+    `<div class="sl-row"><span>Carried in from ${esc(prev)}</span><b>${money(st.opening)}</b></div>`+
+    (st.lines.length?'<div class="sl-rule"></div>':'')+
+    st.lines.map(l=>`<div class="sl-row"><span>${esc(dm(l.d))} ${l.what.replace(/<[^>]*>/g,'')}</span>
+      <b>${l.amt<0?'\u2212'+money(-l.amt):money(l.amt)}</b></div>`).join('')+
+    `<div class="sl-rule"></div>`+
+    (st.bought?`<div class="sl-row"><span>Received this month</span><b>${money(st.bought)}</b></div>`:'')+
+    (st.paid?`<div class="sl-row"><span>Paid this month</span><b>\u2212${money(st.paid)}</b></div>`:'')+
+    `<div class="sl-row sl-tot"><span>Owed now</span><b>${money(st.closing)}</b></div>
+     <div class="sl-rule"></div>
+     <div class="sl-row"><span>Their stock still here</span><b>${money(st.stock)}</b></div>`;}
+
+function slipSupAll(){
+  const all=supAll();
+  if(!all.length)return slipHead('Suppliers')+'<div class="sl-row"><span>Nothing this month.</span></div>';
+  return slipHead('Suppliers')+
+    all.map(st=>`<div class="sl-row sl-tot"><span>${esc(st.name)}</span><b>${money(st.closing)}</b></div>`+
+      `<div class="sl-row"><span>&nbsp;&nbsp;carried in</span><b>${money(st.opening)}</b></div>`+
+      (st.bought?`<div class="sl-row"><span>&nbsp;&nbsp;received</span><b>${money(st.bought)}</b></div>`:'')+
+      (st.paid?`<div class="sl-row"><span>&nbsp;&nbsp;paid</span><b>\u2212${money(st.paid)}</b></div>`:'')
+    ).join('<div class="sl-rule"></div>')+
+    `<div class="sl-rule"></div>
+     <div class="sl-row sl-tot"><span>Owed in all</span><b>${money(all.reduce((a,x)=>a+x.closing,0))}</b></div>`;}
+
+function printSlip(html){
+  const el=document.getElementById('slip');if(!el)return;
+  el.innerHTML=html+'<div class="sl-end">- - -</div>';
+  document.body.classList.add('slipping');
+  const tidy=()=>{document.body.classList.remove('slipping');el.innerHTML='';};
+  window.addEventListener('afterprint',tidy,{once:true});
+  setTimeout(()=>{try{window.print();}catch(e){}setTimeout(tidy,1500);},50);}
+
+/* ======== src/ui/parts.js */
+function drillTable(name){
+  const rows=drillRows(name);
+  if(!rows.length)return '<div class="drill"><div class="empty">Nothing this month.</div></div>';
+  const o=rows.reduce((a,e)=>a+num(e.out),0),i=rows.reduce((a,e)=>a+num(e.in),0),dash='\u2014';
+  return `<div class="drill">
+    <div class="row" style="justify-content:flex-end;margin-bottom:6px">
+      <button class="mini" data-act="printName" data-x="${esc(name)}">Print ${esc(name)}</button></div>
+    ${tbl(
+    `<th>Date</th><th>Kind</th><th>From</th><th class="num">Out</th><th class="num">In</th>`,
+    rows.map(e=>`<tr><td>${esc(ymd(e.d))}</td><td>${esc(e.t)}</td><td>${esc(potOf(e))}</td>
+      <td class="num">${num(e.out)?money(e.out):dash}</td>
+      <td class="num">${num(e.in)?money(e.in):dash}</td></tr>`).join(''),
+    `<tr class="tot"><td colspan="3">${rows.length} entr${rows.length===1?'y':'ies'}</td>
+      <td class="num">${o?money(o):dash}</td><td class="num">${i?money(i):dash}</td></tr>`)}</div>`;}
+
+function flowBlock(groups){
+  if(!groups.length)return '';
+  return groups.map(g=>`<div class="flowg">
+    <div class="flowh"><span>${esc(g.t)}</span>
+      <span class="val">${money(g.total)}</span>
+      <button class="mini" data-act="printKind" data-k="${esc(g.t)}">Print</button></div>
+    ${g.rows.map(r=>{const open=S.ui.drill===r[0];
+      return `<button class="barbtn" data-act="drill" data-x="${esc(r[0])}" aria-expanded="${open}">
+        <span>${esc(r[0])}</span>
+        <span class="track"><span class="fill" style="width:${share(r[1],g.total)}%"></span></span>
+        <span class="val">${money(r[1])} <span class="caret">${open?'\u25be':'\u203a'}</span></span>
+      </button>${open?drillTable(r[0]):''}`;}).join('')}
+  </div>`).join('');}
+
+function supTable(st){
+  const prev=monthName(shiftMonth(monthOf(S.ui.start),-1));
+  return `<div class="drill">
+    <div class="row" style="justify-content:flex-end;margin-bottom:6px">
+      <button class="mini" data-act="printSup" data-x="${esc(st.name)}">Print ${esc(st.name)}</button></div>
+    ${tbl(`<th>Date</th><th>What</th><th class="num">Amount</th>`,
+      `<tr><td>\u2014</td><td>Carried in from ${esc(prev)}</td><td class="num">${money(st.opening)}</td></tr>`+
+      st.lines.map(l=>`<tr><td>${esc(dm(l.d))}</td><td>${esc(l.what)}</td>
+        <td class="num ${l.amt<0?'pos':''}">${l.amt<0?'\u2212 '+money(-l.amt):money(l.amt)}</td></tr>`).join(''),
+      `<tr class="tot"><td colspan="2">Owed at the end of ${esc(monthName(monthOf(S.ui.start)))}</td>
+        <td class="num ${st.closing>0?'neg':''}">${money(st.closing)}</td></tr>`+
+      `<tr><td colspan="2" class="sub">Their stock still in the warehouse</td>
+        <td class="num">${money(st.stock)}</td></tr>`)}
+  </div>`;}
+
+function recentCard(){
+  const all=(S.log||[]).slice().reverse();
+  const show=S.ui.logAll?all:all.slice(0,10);
+  return `<div class="card">
+    <div class="cardhead"><h2>Recent changes</h2>
+      ${all.length?`<button class="mini" data-act="printLog">Print</button>`:''}</div>
+    <p class="sub">Everything that has happened to the books, newest first. If something was a mistake, put it back from here.</p>
+    ${!all.length?'<div class="empty">Nothing has changed yet.</div>':
+      `<div class="logs">${show.map(e=>{
+        const i=e.id||'';
+        return `<div class="logrow ${e.k}">
+          <span class="logt">${esc(logWhen(e.t))}</span>
+          <span class="logs2"><strong>${esc(LOG_VERB[e.k]||'')}</strong> ${esc(e.s)}
+            ${e.who?`<span class="logw">${esc(e.who)}</span>`:''}
+            ${e.undone?'<span class="logw">put back</span>':''}</span>
+          <span>${canUndo(e)?`<button class="mini" data-act="undo" data-i="${esc(i)}">${UNDO_WORD[e.k]}</button>`:''}</span>
+        </div>`;}).join('')}</div>
+      ${all.length>10?`<div class="row" style="margin-top:10px">
+        <button class="mini" data-act="logAll">${S.ui.logAll?'Show just the last 10':'Show all '+all.length}</button></div>`:''}`}
+  </div>`;}
+
+function closedBadge(){return frozen()?'<span class="badge">Closed</span>':'';}
+
+function periodCard(){
+  const f=frozen(),m=monthOf(S.ui.start);
+  return `<div class="card"><div class="row">
+    <div><span class="flab">Month</span>
+      <button class="btn ghost" data-act="prevM">‹</button>
+      <strong style="padding:0 8px">${esc(monthName(m))}</strong>
+      <button class="btn ghost" data-act="nextM">›</button>
+      ${f?'<span class="badge">Closed</span>':''}</div>
+  </div>${f?''
+    : (S.ui.end<today()
+       ? '<p class="note"><strong class="warnc">Ended but never closed.</strong> These figures are being recalculated with today\u2019s salaries, prices and shares \u2014 an estimate, not a record.</p>'
+       : (S.ui.start>today()
+          ? '<p class="note">Not started yet. Rent and salaries show because they are charged to every month in full.</p>'
+          : ''))}</div>`;}
+
+function countVerdict(diff){
+  return diff===0?'matches the books'
+    :(diff<0?money(-diff)+' missing':money(diff)+' more than the books');}
+
+function totalVerdict(t){
+  return t===0?'Everything ties.'
+    :(t<0?money(-t)+' is missing across all pots.'
+         :money(t)+' more than the books say \u2014 something came in that was not recorded.');}
+
+/* ---------------------------------------------------------- electricity */
+function elecCard(){
+  const f=elecFactors(),rows=elecCalc(monthOf(S.ui.start)).slice().reverse();
+  const n=v=>v==null?'':num(v);
+  return `<div class="card"><h2>Electricity</h2>
+    <p class="sub">Three bills off one meter arrangement. Type the prices and the meter reading; the amounts are worked out and go to the Cashbook as Monthly Bill.</p>
+    <div class="entry" style="margin-bottom:6px">
+      <div><label>Private — amperes billed</label><input type="number" value="${f.privateAmps}" data-elecf="privateAmps"></div>
+      <div><label>Elevator — amperes billed</label><input type="number" value="${f.elevatorAmps}" data-elecf="elevatorAmps"></div>
+      <div><label>Elevator — shared between</label><input type="number" value="${f.elevatorShare}" data-elecf="elevatorShare"></div>
+      <div><label>Public — price per unit</label><input type="number" value="${f.publicRate}" data-elecf="publicRate"></div>
+      <div><label>Public — shared between</label><input type="number" value="${f.publicShare}" data-elecf="publicShare"></div>
+    </div>
+    <p class="note" style="margin-bottom:12px">Private = price per ampere × ${f.privateAmps}. Elevator = price per ampere × ${f.elevatorAmps} ÷ ${f.elevatorShare}. Public = units used × ${f.publicRate} ÷ ${f.publicShare}. Each rounded to ${noteSize()} on its own.</p>
+    <div class="grid tiles" style="margin-bottom:12px">
+      ${tile('Billed, all months',money(elecBilled()))}
+      ${tile('Paid',money(elecPaid()))}
+      ${tile('STILL OWED',money(elecOwed()),elecOwed()>0?'not yet paid':'settled',elecOwed()>0?'neg':'pos')}
+    </div>
+    ${tbl(`<th>Month</th><th class="num">Price/amp private</th><th class="num">PRIVATE</th><th class="num">Price/amp elevator</th><th class="num">ELEVATOR</th><th class="num">Meter now</th><th class="num">Meter last</th><th class="num">Units</th><th class="num">PUBLIC</th><th class="num">Total</th><th></th>`,
+      rows.map(x=>`<tr>
+        <td>${esc(monthName(x.row.m))}${x.closed?' <span class="pill">closed</span>':''}</td>
+        <td class="num"><input type="number" step="${noteSize()}" value="${n(x.row.pp)}" data-elec="${esc(x.row.m)}" data-k="pp"></td>
+        <td class="num">${x.priv==null?'—':money(x.priv)}</td>
+        <td class="num"><input type="number" step="${noteSize()}" value="${n(x.row.pe)}" data-elec="${esc(x.row.m)}" data-k="pe"></td>
+        <td class="num">${x.elev==null?'—':money(x.elev)}</td>
+        <td class="num"><input type="number" value="${n(x.row.now)}" data-elec="${esc(x.row.m)}" data-k="now"></td>
+        <td class="num"><input type="number" value="${x.last==null?'':x.last}" data-elec="${esc(x.row.m)}" data-k="last"></td>
+        <td class="num ${x.units!=null&&x.units<0?'neg':''}">${x.units==null?'—':qty(x.units)}</td>
+        <td class="num">${x.pub==null?'—':money(x.pub)}</td>
+        <td class="num"><strong>${x.total==null?'—':money(x.total)}</strong></td>
+        <td>${x.total==null?''
+          :`<button class="mini" data-act="elecPay" data-m="${esc(x.row.m)}" style="color:var(--accent);border-color:var(--accent)">Record payment</button>`}</td>
+      </tr>`).join(''))}
+    ${rows.some(x=>x.units!=null&&x.units<0)?'<p class="note neg">A negative unit count means the meter reading went backwards — check the two readings.</p>':''}
+    <p class="note">Each month's bill is charged to that month's profit as soon as it is worked out here, the same way rent is \u2014 using the power is the cost, paying for it is only cash moving. <strong>Record payment</strong> writes the cash out of the Cashbook and reduces what is owed; it does not change profit again.</p>
+    ${elecOwed()>0?'<p class="note warnc">'+money(elecOwed())+' of electricity has been billed and not paid. It sits alongside your supplier debt.</p>':''}
+  </div>`;
+}
+
+/* ---------------------------------------------------------- Stock & suppliers */
+function invHead(L){
+  if(L==='A')return `<th>Flavour</th><th class="num">Bucket + tobacco (g)</th><th>Bucket</th><th class="num">Tare</th><th class="num">Kg</th><th class="num">Price/kg</th><th class="num">Value</th>`;
+  if(L==='B')return `<th>Brand</th><th class="num">Cartons</th><th class="num">Blocks</th><th class="num">Packs</th><th class="num">Kg</th><th class="num">Price/kg</th><th class="num">Value</th>`;
+  if(L==='E')return `<th>Item</th><th class="num">Cartons</th><th class="num">Loose buckets</th><th class="num">Total</th><th class="num">Price</th><th class="num">Value</th>`;
+  return `<th>Item</th><th class="num">Packages</th><th class="num">Pieces</th><th>Unit</th><th class="num">Per unit</th><th class="num">Total</th><th class="num">Price</th><th class="num">Value</th>`;}
+
+function invRow(it,counts,date,ro){
+  const c=counts[it.name]||{},L=catLetter(it.category),q=itemQty(it,counts),pr=priceOf(it,date);
+  const inp=(k,step)=>ro?`<span>${c[k]==null||c[k]===''?'—':qty(c[k])}</span>`
+    :`<input type="number" step="${step||'any'}" value="${c[k]==null||c[k]===''?'':num(c[k])}" data-inv="${esc(it.name)}" data-k="${k}">`;
+  if(L==='A')return `<tr><td>${esc(it.name)}</td><td class="num">${inp('g','1')}</td>
+    <td>${ro?esc(c.bucket||''):`<select data-inv="${esc(it.name)}" data-k="bucket">${opts((S.setup.tare||[]).map(t=>t.name),c.bucket)}</select>`}</td>
+    <td class="num">${tareOf(c.bucket)}</td><td class="num">${qty(q)}</td><td class="num">${money(pr)}</td><td class="num">${money(q*pr)}</td></tr>`;
+  if(L==='B')return `<tr><td>${esc(it.name)}</td><td class="num">${inp('cartons')}</td><td class="num">${inp('blocks')}</td><td class="num">${inp('packs')}</td>
+    <td class="num">${qty(q)}</td><td class="num">${money(pr)}</td><td class="num">${money(q*pr)}</td></tr>`;
+  if(L==='E')return `<tr><td>${esc(it.name)}</td><td class="num">${inp('cartons')}</td><td class="num">${inp('buckets')}</td>
+    <td class="num">${qty(q)}</td><td class="num">${money(pr)}</td><td class="num">${money(q*pr)}</td></tr>`;
+  return `<tr><td>${esc(it.name)}</td><td class="num">${inp('pkg')}</td><td class="num">${inp('pcs')}</td><td>${esc(it.unit||'')}</td>
+    <td class="num">${num(it.per)||1}</td><td class="num">${qty(q)}</td><td class="num">${money(pr)}</td><td class="num">${money(q*pr)}</td></tr>`;}
+
+/* ---------------------------------------------------------- settle up */
+function payLine(r,i,step){
+  /* Every step used to number its inputs from zero, so the first supplier and the
+     first bill were both called "pay0". The Pay button looked its amount up by
+     that name and the browser handed back whichever came first on the page - the
+     supplier - so the bill offered to pay the supplier's figure. */
+  const id='pay'+(step||0)+'-'+i;
+  return `<tr><td>${esc(r.x)}${r.guess&&r.amt?' <span class="pill">last month\u2019s amount</span>':''}
+      ${r.note?`<br><span style="color:var(--muted);font-size:11px">${r.note}</span>`:''}</td>
+    <td class="num">${r.over!=null
+      ? `<span class="neg"><strong>${money(r.over)}</strong> over-drawn</span>`
+      : (r.amt>0
+        ? (r.editable
+          ? `<input type="number" step="${noteSize()}" id="${id}" value="${num(r.amt)||''}" style="max-width:140px">`
+          : `<strong>${money(r.amt)}</strong>`)
+        : '')}</td>
+    <td>${r.amt>0
+      ? `<button class="btn primary" style="padding:5px 12px"
+          data-act="pay" data-t="${esc(r.t)}" data-x="${esc(r.x)}" data-amt="${num(r.amt)}"
+          ${r.editable?`data-in="${id}"`:''} ${r.month?`data-m="${esc(r.month)}"`:''}>Pay</button>`
+      : (r.done?`<span class="pill ${r.done==='paid'?'pos':''}">${esc(r.done)}</span>`:'')}</td></tr>`;}
+
+function payStep(n,title,why,rows,doneMsg){
+  const left=rows.filter(r=>r.amt>0).length;
+  return `<div class="step"><div class="no">${n}</div><div>
+    <h3>${esc(title)}${left?'':' <span class="pill pos">done</span>'}</h3><p>${why}</p>
+    ${rows.length
+      ? tbl(`<th>Who / what</th><th class="num">Amount</th><th></th>`,rows.map((r,i)=>payLine(r,i,n)).join(''))
+      : `<p class="note pos" style="margin-top:6px">Nothing left \u2014 ${esc(doneMsg)}</p>`}
+  </div></div>`;}
+
+function settleCard(){
+  const sal=dueSalaries(),sup=dueSuppliers(),fix=dueFixed(),el=dueElec(),
+        bil=dueBills(),par=duePartners();
+  const total=[sal,sup,fix,el,bil,par].reduce((a,g)=>a+g.reduce((x,r)=>x+num(r.amt),0),0);
+  const cash=cashOnHand();
+  return `<div class="card"><h2>Settle up</h2>
+    <p class="sub">Each Pay writes the Cashbook entry for you. Work down the list.</p>
+    <div class="row" style="margin-bottom:12px">
+      <div><span class="flab">Pay from</span><br><select id="settlePot">${potOpts(S.ui.d.pot,'own')}</select></div>
+      <div><span class="flab">Dated</span><br><input type="date" id="settleDate" value="${esc(today())}"></div>
+    </div>
+    <p class="note" style="margin:-8px 0 12px">Dated the day the money leaves your hand. Whatever date you put, it settles
+      <strong>${esc(monthName(monthOf(S.ui.start)))}</strong> &mdash; so paying last month&rsquo;s bills today clears last month
+      and still leaves today&rsquo;s cash right.</p>
+    <div class="grid tiles" style="margin-bottom:14px">
+      ${tile('Still to pay',money(total),total?'across all the steps below':'everything is settled',total?'':'pos')}
+      ${tile('Cash on hand',money(cash),ownPots().map(p=>p.name).join(' + '),cls(cash))}
+      ${tile('After paying it all',money(cash-total),cash-total<0?'you are short':'what would be left',cash-total<0?'neg':'')}
+    </div>
+    <div class="steps">
+      ${payStep(1,'Salaries','Less the advances taken.',sal,'every salary is paid')}
+      ${payStep(2,'Suppliers','What you have used and not paid for \u2014 owed, less their stock still here.',sup,'nothing owed')}
+      ${payStep(3,'Rent & fixed','Already charged to the month.',fix,'rent is paid')}
+      ${payStep(4,'Electricity','Already charged to the month it was used.',el,'nothing owed')}
+      ${payStep(5,'Other bills','Pay before the partners \u2014 these change what each partner is owed.',bil,'nothing outstanding')}
+      ${payStep(6,'Partners','Each share, less what they already took.',par,'both are square')}
+      ${par.some(p=>p.over)?'<p class="note">An over-drawn partner has taken more than their share \u2014 that comes back, or carries into next month.</p>':''}
+    </div>
+    ${total&&cash-total<0?`<p class="note warnc">Paying everything leaves you ${money(cash-total)}. Pay what you can \u2014 the rest stays on this list.</p>`:''}
+  </div>`;}
+
+/* ---------------------------------------------------------- Setup */
+function editor(title,sub,rows,cols,addAct,delAct,kind){
+  return `<div class="card"><h2>${esc(title)}</h2><p class="sub">${sub}</p>
+    ${tbl(cols.map(c=>`<th class="${c.num?'num':''}">${esc(c.label)}</th>`).join('')+'<th></th>',
+      rows.map((r,i)=>`<tr>${cols.map(c=>`<td class="${c.num?'num':''}">${c.opts
+        ?`<select data-set="${kind}" data-i="${i}" data-k="${c.k}">${opts(c.opts(),r[c.k])}</select>`
+        :`<input ${c.num?'type="number" step="any"':''} value="${esc(r[c.k]==null?'':r[c.k])}" data-set="${kind}" data-i="${i}" data-k="${c.k}">`}</td>`).join('')}
+        <td><button class="mini" data-act="${delAct}" data-i="${i}">Remove</button></td></tr>`).join(''))}
+    <div class="row" style="margin-top:10px"><button class="btn ghost" data-act="${addAct}">Add row</button></div></div>`;}
+
+/* ======== src/ui/render.js */
 /* ============================================================ render */
 const VIEWS={};
+
 function render(){
   if(!S.setup){bar();$('#tab-'+S.ui.tab).innerHTML=
     `<div class="card"><h2>No books here yet</h2><p class="sub">This page holds the cash, stock and settlement records for the lounge.</p></div>`;
@@ -1347,6 +1786,7 @@ function render(){
   if(active){const el=host.querySelector('#'+CSS.escape(active));if(el)el.focus();}
   header();
 }
+
 function header(){
   if(!S.setup)return;
   const r=result();
@@ -1356,38 +1796,8 @@ function header(){
   $('#hdFloat').innerHTML='<span class="floatc">'+money(inHands(upto))+'</span>';
   $('#hdNet').innerHTML='<span class="'+cls(r.net)+'">'+money(r.net)+'</span>';
 }
-/* Rebuilding a tab throws away the field the person is moving to, so an edit made
-   by typing waits until they have finished with the inputs altogether. */
-function renderLater(){clearTimeout(renderLater.t);renderLater.t=setTimeout(function(){
-  const a=document.activeElement;
-  if(a&&(a.tagName==='INPUT'||a.tagName==='SELECT')){renderLater();return;}
-  render();},150);}
-function bar(){const nav=$('#tabs');
-  if(nav.childElementCount!==TABS.length)
-    nav.innerHTML=TABS.map(([k,l])=>`<button role="tab" data-tab="${k}">${l}</button>`).join('');
-  nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===S.ui.tab));}
 
-function tile(k,v,n,c){return `<div class="tile"><div class="k">${esc(k)}</div><div class="v ${c||''}">${v}</div>${n?`<div class="n">${esc(n)}</div>`:''}</div>`;}
-function tbl(head,rows,foot){return `<div class="tblbox"><table><thead><tr>${head}</tr></thead><tbody>${rows||''}${foot||''}</tbody></table></div>`;}
-function opts(list,val){return (list||[]).map(o=>`<option ${o===val?'selected':''}>${esc(o)}</option>`).join('');}
-function potOpts(val,kind){const l=(kind==='own'?ownPots():pots()).map(p=>p.name);
-  return opts(l.includes(val)||!val?l:[val].concat(l),val||defaultPot());}
-function closedBadge(){return frozen()?'<span class="badge">Closed</span>':'';}
-function periodCard(){
-  const f=frozen(),m=monthOf(S.ui.start);
-  return `<div class="card"><div class="row">
-    <div><span class="flab">Month</span>
-      <button class="btn ghost" data-act="prevM">‹</button>
-      <strong style="padding:0 8px">${esc(monthName(m))}</strong>
-      <button class="btn ghost" data-act="nextM">›</button>
-      ${f?'<span class="badge">Closed</span>':''}</div>
-  </div>${f?''
-    : (S.ui.end<today()
-       ? '<p class="note"><strong class="warnc">Ended but never closed.</strong> These figures are being recalculated with today\u2019s salaries, prices and shares \u2014 an estimate, not a record.</p>'
-       : (S.ui.start>today()
-          ? '<p class="note">Not started yet. Rent and salaries show because they are charged to every month in full.</p>'
-          : ''))}</div>`;}
-
+/* ======== src/ui/views/tonight.js */
 /* ---------------------------------------------------------- Tonight */
 VIEWS.tonight=function(){
   const d=S.ui.d.night||today();
@@ -1471,13 +1881,7 @@ VIEWS.tonight=function(){
   </div>`;
 };
 
-function countVerdict(diff){
-  return diff===0?'matches the books'
-    :(diff<0?money(-diff)+' missing':money(diff)+' more than the books');}
-function totalVerdict(t){
-  return t===0?'Everything ties.'
-    :(t<0?money(-t)+' is missing across all pots.'
-         :money(t)+' more than the books say \u2014 something came in that was not recorded.');}
+/* ======== src/ui/views/dashboard.js */
 /* update what the count says without rebuilding the screen around it */
 
 /* ---------------------------------------------------------- Dashboard */
@@ -1537,6 +1941,7 @@ VIEWS.dashboard=function(){
   </div>`;
 };
 
+/* ======== src/ui/views/cashbook.js */
 /* ---------------------------------------------------------- Cashbook */
 VIEWS.cashbook=function(){
   const types=typeNames(),sel=S.ui.d.cbType||types[0],isXfer=sel===XFER,isIn=IN_TYPES.includes(sel);
@@ -1582,6 +1987,7 @@ VIEWS.cashbook=function(){
   </div>`;
 };
 
+/* ======== src/ui/views/cash.js */
 /* ---------------------------------------------------------- Cash & counts */
 VIEWS.cash=function(){
   const rows=countRows(),list=rows.slice().reverse();
@@ -1622,66 +2028,7 @@ VIEWS.cash=function(){
   </div>`+elecCard();
 };
 
-/* ---------------------------------------------------------- electricity */
-function elecCard(){
-  const f=elecFactors(),rows=elecCalc(monthOf(S.ui.start)).slice().reverse();
-  const n=v=>v==null?'':num(v);
-  return `<div class="card"><h2>Electricity</h2>
-    <p class="sub">Three bills off one meter arrangement. Type the prices and the meter reading; the amounts are worked out and go to the Cashbook as Monthly Bill.</p>
-    <div class="entry" style="margin-bottom:6px">
-      <div><label>Private — amperes billed</label><input type="number" value="${f.privateAmps}" data-elecf="privateAmps"></div>
-      <div><label>Elevator — amperes billed</label><input type="number" value="${f.elevatorAmps}" data-elecf="elevatorAmps"></div>
-      <div><label>Elevator — shared between</label><input type="number" value="${f.elevatorShare}" data-elecf="elevatorShare"></div>
-      <div><label>Public — price per unit</label><input type="number" value="${f.publicRate}" data-elecf="publicRate"></div>
-      <div><label>Public — shared between</label><input type="number" value="${f.publicShare}" data-elecf="publicShare"></div>
-    </div>
-    <p class="note" style="margin-bottom:12px">Private = price per ampere × ${f.privateAmps}. Elevator = price per ampere × ${f.elevatorAmps} ÷ ${f.elevatorShare}. Public = units used × ${f.publicRate} ÷ ${f.publicShare}. Each rounded to ${noteSize()} on its own.</p>
-    <div class="grid tiles" style="margin-bottom:12px">
-      ${tile('Billed, all months',money(elecBilled()))}
-      ${tile('Paid',money(elecPaid()))}
-      ${tile('STILL OWED',money(elecOwed()),elecOwed()>0?'not yet paid':'settled',elecOwed()>0?'neg':'pos')}
-    </div>
-    ${tbl(`<th>Month</th><th class="num">Price/amp private</th><th class="num">PRIVATE</th><th class="num">Price/amp elevator</th><th class="num">ELEVATOR</th><th class="num">Meter now</th><th class="num">Meter last</th><th class="num">Units</th><th class="num">PUBLIC</th><th class="num">Total</th><th></th>`,
-      rows.map(x=>`<tr>
-        <td>${esc(monthName(x.row.m))}${x.closed?' <span class="pill">closed</span>':''}</td>
-        <td class="num"><input type="number" step="${noteSize()}" value="${n(x.row.pp)}" data-elec="${esc(x.row.m)}" data-k="pp"></td>
-        <td class="num">${x.priv==null?'—':money(x.priv)}</td>
-        <td class="num"><input type="number" step="${noteSize()}" value="${n(x.row.pe)}" data-elec="${esc(x.row.m)}" data-k="pe"></td>
-        <td class="num">${x.elev==null?'—':money(x.elev)}</td>
-        <td class="num"><input type="number" value="${n(x.row.now)}" data-elec="${esc(x.row.m)}" data-k="now"></td>
-        <td class="num"><input type="number" value="${x.last==null?'':x.last}" data-elec="${esc(x.row.m)}" data-k="last"></td>
-        <td class="num ${x.units!=null&&x.units<0?'neg':''}">${x.units==null?'—':qty(x.units)}</td>
-        <td class="num">${x.pub==null?'—':money(x.pub)}</td>
-        <td class="num"><strong>${x.total==null?'—':money(x.total)}</strong></td>
-        <td>${x.total==null?''
-          :`<button class="mini" data-act="elecPay" data-m="${esc(x.row.m)}" style="color:var(--accent);border-color:var(--accent)">Record payment</button>`}</td>
-      </tr>`).join(''))}
-    ${rows.some(x=>x.units!=null&&x.units<0)?'<p class="note neg">A negative unit count means the meter reading went backwards — check the two readings.</p>':''}
-    <p class="note">Each month's bill is charged to that month's profit as soon as it is worked out here, the same way rent is \u2014 using the power is the cost, paying for it is only cash moving. <strong>Record payment</strong> writes the cash out of the Cashbook and reduces what is owed; it does not change profit again.</p>
-    ${elecOwed()>0?'<p class="note warnc">'+money(elecOwed())+' of electricity has been billed and not paid. It sits alongside your supplier debt.</p>':''}
-  </div>`;
-}
-
-/* ---------------------------------------------------------- Stock & suppliers */
-function invHead(L){
-  if(L==='A')return `<th>Flavour</th><th class="num">Bucket + tobacco (g)</th><th>Bucket</th><th class="num">Tare</th><th class="num">Kg</th><th class="num">Price/kg</th><th class="num">Value</th>`;
-  if(L==='B')return `<th>Brand</th><th class="num">Cartons</th><th class="num">Blocks</th><th class="num">Packs</th><th class="num">Kg</th><th class="num">Price/kg</th><th class="num">Value</th>`;
-  if(L==='E')return `<th>Item</th><th class="num">Cartons</th><th class="num">Loose buckets</th><th class="num">Total</th><th class="num">Price</th><th class="num">Value</th>`;
-  return `<th>Item</th><th class="num">Packages</th><th class="num">Pieces</th><th>Unit</th><th class="num">Per unit</th><th class="num">Total</th><th class="num">Price</th><th class="num">Value</th>`;}
-function invRow(it,counts,date,ro){
-  const c=counts[it.name]||{},L=catLetter(it.category),q=itemQty(it,counts),pr=priceOf(it,date);
-  const inp=(k,step)=>ro?`<span>${c[k]==null||c[k]===''?'—':qty(c[k])}</span>`
-    :`<input type="number" step="${step||'any'}" value="${c[k]==null||c[k]===''?'':num(c[k])}" data-inv="${esc(it.name)}" data-k="${k}">`;
-  if(L==='A')return `<tr><td>${esc(it.name)}</td><td class="num">${inp('g','1')}</td>
-    <td>${ro?esc(c.bucket||''):`<select data-inv="${esc(it.name)}" data-k="bucket">${opts((S.setup.tare||[]).map(t=>t.name),c.bucket)}</select>`}</td>
-    <td class="num">${tareOf(c.bucket)}</td><td class="num">${qty(q)}</td><td class="num">${money(pr)}</td><td class="num">${money(q*pr)}</td></tr>`;
-  if(L==='B')return `<tr><td>${esc(it.name)}</td><td class="num">${inp('cartons')}</td><td class="num">${inp('blocks')}</td><td class="num">${inp('packs')}</td>
-    <td class="num">${qty(q)}</td><td class="num">${money(pr)}</td><td class="num">${money(q*pr)}</td></tr>`;
-  if(L==='E')return `<tr><td>${esc(it.name)}</td><td class="num">${inp('cartons')}</td><td class="num">${inp('buckets')}</td>
-    <td class="num">${qty(q)}</td><td class="num">${money(pr)}</td><td class="num">${money(q*pr)}</td></tr>`;
-  return `<tr><td>${esc(it.name)}</td><td class="num">${inp('pkg')}</td><td class="num">${inp('pcs')}</td><td>${esc(it.unit||'')}</td>
-    <td class="num">${num(it.per)||1}</td><td class="num">${qty(q)}</td><td class="num">${money(pr)}</td><td class="num">${money(q*pr)}</td></tr>`;}
-
+/* ======== src/ui/views/stock.js */
 VIEWS.stock=function(){
   const dates=countDates(),date=S.ui.d.inv||countForPeriod()||today();
   const ro=!!(S.closed[monthOf(date)]&&S.closed[monthOf(date)].countDate===date);
@@ -1762,6 +2109,7 @@ VIEWS.stock=function(){
   </div>`;
 };
 
+/* ======== src/ui/views/settlement.js */
 /* ---------------------------------------------------------- Settlement */
 VIEWS.settlement=function(){
   const f=frozen(),r=result(),pay=payroll(),prt=partners();
@@ -1827,75 +2175,7 @@ VIEWS.settlement=function(){
   return periodCard()+(f?'':settleCard())+result_+record+closing+history;
 };
 
-/* ---------------------------------------------------------- settle up */
-function payLine(r,i,step){
-  /* Every step used to number its inputs from zero, so the first supplier and the
-     first bill were both called "pay0". The Pay button looked its amount up by
-     that name and the browser handed back whichever came first on the page - the
-     supplier - so the bill offered to pay the supplier's figure. */
-  const id='pay'+(step||0)+'-'+i;
-  return `<tr><td>${esc(r.x)}${r.guess&&r.amt?' <span class="pill">last month\u2019s amount</span>':''}
-      ${r.note?`<br><span style="color:var(--muted);font-size:11px">${r.note}</span>`:''}</td>
-    <td class="num">${r.over!=null
-      ? `<span class="neg"><strong>${money(r.over)}</strong> over-drawn</span>`
-      : (r.amt>0
-        ? (r.editable
-          ? `<input type="number" step="${noteSize()}" id="${id}" value="${num(r.amt)||''}" style="max-width:140px">`
-          : `<strong>${money(r.amt)}</strong>`)
-        : '')}</td>
-    <td>${r.amt>0
-      ? `<button class="btn primary" style="padding:5px 12px"
-          data-act="pay" data-t="${esc(r.t)}" data-x="${esc(r.x)}" data-amt="${num(r.amt)}"
-          ${r.editable?`data-in="${id}"`:''} ${r.month?`data-m="${esc(r.month)}"`:''}>Pay</button>`
-      : (r.done?`<span class="pill ${r.done==='paid'?'pos':''}">${esc(r.done)}</span>`:'')}</td></tr>`;}
-function payStep(n,title,why,rows,doneMsg){
-  const left=rows.filter(r=>r.amt>0).length;
-  return `<div class="step"><div class="no">${n}</div><div>
-    <h3>${esc(title)}${left?'':' <span class="pill pos">done</span>'}</h3><p>${why}</p>
-    ${rows.length
-      ? tbl(`<th>Who / what</th><th class="num">Amount</th><th></th>`,rows.map((r,i)=>payLine(r,i,n)).join(''))
-      : `<p class="note pos" style="margin-top:6px">Nothing left \u2014 ${esc(doneMsg)}</p>`}
-  </div></div>`;}
-function settleCard(){
-  const sal=dueSalaries(),sup=dueSuppliers(),fix=dueFixed(),el=dueElec(),
-        bil=dueBills(),par=duePartners();
-  const total=[sal,sup,fix,el,bil,par].reduce((a,g)=>a+g.reduce((x,r)=>x+num(r.amt),0),0);
-  const cash=cashOnHand();
-  return `<div class="card"><h2>Settle up</h2>
-    <p class="sub">Each Pay writes the Cashbook entry for you. Work down the list.</p>
-    <div class="row" style="margin-bottom:12px">
-      <div><span class="flab">Pay from</span><br><select id="settlePot">${potOpts(S.ui.d.pot,'own')}</select></div>
-      <div><span class="flab">Dated</span><br><input type="date" id="settleDate" value="${esc(today())}"></div>
-    </div>
-    <p class="note" style="margin:-8px 0 12px">Dated the day the money leaves your hand. Whatever date you put, it settles
-      <strong>${esc(monthName(monthOf(S.ui.start)))}</strong> &mdash; so paying last month&rsquo;s bills today clears last month
-      and still leaves today&rsquo;s cash right.</p>
-    <div class="grid tiles" style="margin-bottom:14px">
-      ${tile('Still to pay',money(total),total?'across all the steps below':'everything is settled',total?'':'pos')}
-      ${tile('Cash on hand',money(cash),ownPots().map(p=>p.name).join(' + '),cls(cash))}
-      ${tile('After paying it all',money(cash-total),cash-total<0?'you are short':'what would be left',cash-total<0?'neg':'')}
-    </div>
-    <div class="steps">
-      ${payStep(1,'Salaries','Less the advances taken.',sal,'every salary is paid')}
-      ${payStep(2,'Suppliers','What you have used and not paid for \u2014 owed, less their stock still here.',sup,'nothing owed')}
-      ${payStep(3,'Rent & fixed','Already charged to the month.',fix,'rent is paid')}
-      ${payStep(4,'Electricity','Already charged to the month it was used.',el,'nothing owed')}
-      ${payStep(5,'Other bills','Pay before the partners \u2014 these change what each partner is owed.',bil,'nothing outstanding')}
-      ${payStep(6,'Partners','Each share, less what they already took.',par,'both are square')}
-      ${par.some(p=>p.over)?'<p class="note">An over-drawn partner has taken more than their share \u2014 that comes back, or carries into next month.</p>':''}
-    </div>
-    ${total&&cash-total<0?`<p class="note warnc">Paying everything leaves you ${money(cash-total)}. Pay what you can \u2014 the rest stays on this list.</p>`:''}
-  </div>`;}
-
-/* ---------------------------------------------------------- Setup */
-function editor(title,sub,rows,cols,addAct,delAct,kind){
-  return `<div class="card"><h2>${esc(title)}</h2><p class="sub">${sub}</p>
-    ${tbl(cols.map(c=>`<th class="${c.num?'num':''}">${esc(c.label)}</th>`).join('')+'<th></th>',
-      rows.map((r,i)=>`<tr>${cols.map(c=>`<td class="${c.num?'num':''}">${c.opts
-        ?`<select data-set="${kind}" data-i="${i}" data-k="${c.k}">${opts(c.opts(),r[c.k])}</select>`
-        :`<input ${c.num?'type="number" step="any"':''} value="${esc(r[c.k]==null?'':r[c.k])}" data-set="${kind}" data-i="${i}" data-k="${c.k}">`}</td>`).join('')}
-        <td><button class="mini" data-act="${delAct}" data-i="${i}">Remove</button></td></tr>`).join(''))}
-    <div class="row" style="margin-top:10px"><button class="btn ghost" data-act="${addAct}">Add row</button></div></div>`;}
+/* ======== src/ui/views/setup.js */
 VIEWS.setup=function(){
   const b=S.setup.business||{},cv=S.setup.conversions||{},cats=(S.setup.categories||[]);
   const shares=(S.setup.partners||[]).reduce((a,p)=>a+num(p.share),0);
@@ -1974,84 +2254,9 @@ VIEWS.setup=function(){
   </div>`;
 };
 
-/* ============================================================ actions */
-function byId(a,id){return a.find(r=>r.id===id);}
-function flash(m){if(noteSticky&&!m)return;const el=$('#dbnote');if(!el)return;
-  el.textContent=m||'';el.hidden=!m;clearTimeout(flash.t);
-  flash.t=setTimeout(()=>{if(!noteSticky){el.textContent='';el.hidden=true;}},6000);}
-/* browsing is a view, not a setting — the app always opens on the current month */
-/* ---- printing, on the till roll by the counter.
-   Only the slip goes to the printer; the whole page steps aside and comes back. */
-function dm(d){const x=ymd(d);return x.slice(8,10)+'/'+x.slice(5,7);}
-function slipHead(title){
-  const biz=(S.setup.business&&S.setup.business.name)||'Twilight',n=new Date();
-  const hh=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');
-  return `<div class="sl-biz">${esc(biz)}</div>
-    <div class="sl-title">${esc(title)}</div>
-    <div class="sl-meta">${esc(monthName(monthOf(S.ui.start)))}</div>
-    <div class="sl-meta">printed ${esc(today())} ${hh}</div>
-    <div class="sl-rule"></div>`;}
-function slipRows(rows){
-  return rows.map(e=>`<div class="sl-row"><span>${dm(e.d)} ${esc(e.t)}</span>
-    <b>${num(e.out)?money(e.out):'+'+money(e.in)}</b></div>`).join('');}
-function slipName(name){
-  const rows=drillRows(name);
-  if(!rows.length)return slipHead(name)+'<div class="sl-row"><span>Nothing this month.</span></div>';
-  const o=rows.reduce((a,e)=>a+num(e.out),0),i=rows.reduce((a,e)=>a+num(e.in),0);
-  return slipHead(name)+slipRows(rows)+`<div class="sl-rule"></div>`+
-    (o?`<div class="sl-row sl-tot"><span>Out</span><b>${money(o)}</b></div>`:'')+
-    (i?`<div class="sl-row sl-tot"><span>In</span><b>${money(i)}</b></div>`:'')+
-    `<div class="sl-row"><span>${rows.length} entr${rows.length===1?'y':'ies'}</span><b></b></div>`;}
-function slipKind(kind){
-  const fl=cashFlow(),g=fl.out.concat(fl.inn).filter(x=>x.t===kind)[0];
-  if(!g)return slipHead(kind)+'<div class="sl-row"><span>Nothing this month.</span></div>';
-  return slipHead(kind)+
-    g.rows.map(r=>`<div class="sl-row"><span>${esc(r[0])}</span><b>${money(r[1])}</b></div>`).join('')+
-    `<div class="sl-rule"></div><div class="sl-row sl-tot"><span>Total</span><b>${money(g.total)}</b></div>`;}
-function slipAll(){
-  const fl=cashFlow();
-  const part=(label,groups)=>!groups.length?'':`<div class="sl-sub">${label}</div>`+
-    groups.map(g=>`<div class="sl-row sl-tot"><span>${esc(g.t)}</span><b>${money(g.total)}</b></div>`+
-      g.rows.map(r=>`<div class="sl-row"><span>&nbsp;&nbsp;${esc(r[0])}</span><b>${money(r[1])}</b></div>`).join('')
-    ).join('<div class="sl-rule"></div>');
-  const o=fl.out.reduce((a,g)=>a+g.total,0),i=fl.inn.reduce((a,g)=>a+g.total,0);
-  return slipHead('Where the money went')+part('Went out',fl.out)+
-    (fl.inn.length?'<div class="sl-rule"></div>'+part('Came in',fl.inn):'')+
-    `<div class="sl-rule"></div>
-     <div class="sl-row sl-tot"><span>Out</span><b>${money(o)}</b></div>
-     <div class="sl-row sl-tot"><span>In</span><b>${money(i)}</b></div>`;}
-function slipSup(name){
-  const st=supStatement(name),prev=monthName(shiftMonth(monthOf(S.ui.start),-1));
-  return slipHead(st.name)+
-    `<div class="sl-row"><span>Carried in from ${esc(prev)}</span><b>${money(st.opening)}</b></div>`+
-    (st.lines.length?'<div class="sl-rule"></div>':'')+
-    st.lines.map(l=>`<div class="sl-row"><span>${esc(dm(l.d))} ${l.what.replace(/<[^>]*>/g,'')}</span>
-      <b>${l.amt<0?'\u2212'+money(-l.amt):money(l.amt)}</b></div>`).join('')+
-    `<div class="sl-rule"></div>`+
-    (st.bought?`<div class="sl-row"><span>Received this month</span><b>${money(st.bought)}</b></div>`:'')+
-    (st.paid?`<div class="sl-row"><span>Paid this month</span><b>\u2212${money(st.paid)}</b></div>`:'')+
-    `<div class="sl-row sl-tot"><span>Owed now</span><b>${money(st.closing)}</b></div>
-     <div class="sl-rule"></div>
-     <div class="sl-row"><span>Their stock still here</span><b>${money(st.stock)}</b></div>`;}
-function slipSupAll(){
-  const all=supAll();
-  if(!all.length)return slipHead('Suppliers')+'<div class="sl-row"><span>Nothing this month.</span></div>';
-  return slipHead('Suppliers')+
-    all.map(st=>`<div class="sl-row sl-tot"><span>${esc(st.name)}</span><b>${money(st.closing)}</b></div>`+
-      `<div class="sl-row"><span>&nbsp;&nbsp;carried in</span><b>${money(st.opening)}</b></div>`+
-      (st.bought?`<div class="sl-row"><span>&nbsp;&nbsp;received</span><b>${money(st.bought)}</b></div>`:'')+
-      (st.paid?`<div class="sl-row"><span>&nbsp;&nbsp;paid</span><b>\u2212${money(st.paid)}</b></div>`:'')
-    ).join('<div class="sl-rule"></div>')+
-    `<div class="sl-rule"></div>
-     <div class="sl-row sl-tot"><span>Owed in all</span><b>${money(all.reduce((a,x)=>a+x.closing,0))}</b></div>`;}
-function printSlip(html){
-  const el=document.getElementById('slip');if(!el)return;
-  el.innerHTML=html+'<div class="sl-end">- - -</div>';
-  document.body.classList.add('slipping');
-  const tidy=()=>{document.body.classList.remove('slipping');el.innerHTML='';};
-  window.addEventListener('afterprint',tidy,{once:true});
-  setTimeout(()=>{try{window.print();}catch(e){}setTimeout(tidy,1500);},50);}
+/* ======== src/ui/actions.js */
 function setMonth(ym){S.ui.start=ym+'-01';S.ui.end=endOfMonth(ym);S.ui.drill=null;}
+
 /* the whole count for a day is written in one go, when the button is pressed */
 function saveCounts(d,vals,note){
   const counts={};
@@ -2066,6 +2271,7 @@ function saveCounts(d,vals,note){
   delete r.counted;
   r.counts=counts;r.note=note||'';
   return {any:true,n:Object.keys(counts).length,p:saveYr('rc',S.rc,[d])};}
+
 function closeMonth(){
   const m=monthOf(S.ui.start),r=live(),prt=livePartners(),sup=liveSuppliers(),cd=r.cogs.date;
   S.closed[m]=snapshot();saveClosed(m);
@@ -2086,11 +2292,13 @@ function closeMonth(){
   S.ui.d.confirmClose=null;
   setMonth(nextMonth(m));
   flash(monthName(m)+' is closed and frozen. Supplier debt rebased to '+S.closed[m].period.end+', and you are now in '+monthName(monthOf(S.ui.start))+'.');}
+
 function reopen(){const m=monthOf(S.ui.start),c=S.closed[m];if(!c)return;
   delete S.closed[m];
   writeLocal();render();
   flash(monthName(m)+' is open again. The partner ledger rows and the rebased supplier debt are still there — close it again to rewrite them.');}
 
+/* ======== src/boot.js */
 document.addEventListener('click',function(ev){
   const t=ev.target.closest('[data-tab]');
   if(t){S.ui.tab=t.dataset.tab;
@@ -2262,28 +2470,20 @@ document.addEventListener('click',function(ev){
   else if(a==='delReason'){S.setup.reasons.splice(+el.dataset.i,1);go();}
 });
 
-/* every number field here holds one value you are replacing, not editing, so
-   arriving in one selects what is there and typing overwrites it.
-   A click focuses and then its own mouseup collapses the selection, so the
-   selection has to be made again after that. */
-function wantsAll(t){return t&&t.tagName==='INPUT'&&t.type==='number'&&t.value!=='';}
-function pickAll(t){try{t.select();}catch(e){}}
 document.addEventListener('focusin',function(ev){
   if(!wantsAll(ev.target))return;
   ev.target.dataset.pickall='1';
   pickAll(ev.target);
 });
+
 document.addEventListener('mouseup',function(ev){
   const t=ev.target;
   if(t&&t.dataset&&t.dataset.pickall){delete t.dataset.pickall;ev.preventDefault();pickAll(t);}
 },true);
+
 document.addEventListener('focusout',function(ev){
   if(ev.target&&ev.target.dataset)delete ev.target.dataset.pickall;
 });
-
-/* a menu choice is finished the moment it is made, so it may redraw at once;
-   a typed figure may be one of several, so the redraw waits */
-function redraw(t){if(t&&t.tagName==='SELECT')render();else{header();renderLater();}}
 
 document.addEventListener('change',function(ev){
   const t=ev.target;
@@ -2343,7 +2543,9 @@ document.addEventListener('change',function(ev){
 });
 
 render();
+
 connect().then(render).catch(()=>render());
+
 })();
 </script>
 
